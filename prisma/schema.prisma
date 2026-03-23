@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  company       String?
+  plan          Plan      @default(STARTER)
+  interviewsUsed Int      @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  jobs     Job[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  title           String
+  description     String    @db.Text
+  requiredSkills  Json
+  yearsExperience Int       @default(0)
+  customQuestions Json
+  interviewScript Json?
+  interviewLink   String    @unique
+  status          JobStatus @default(ACTIVE)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  createdBy  User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+
+  @@map("jobs")
+}
+
+model Candidate {
+  id        String          @id @default(cuid())
+  name      String
+  email     String
+  jobId     String
+  status    CandidateStatus @default(PENDING)
+  invitedAt DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  job       Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  interview Interview?
+
+  @@unique([email, jobId])
+  @@map("candidates")
+}
+
+model Interview {
+  id             String          @id @default(cuid())
+  candidateId    String          @unique
+  transcript     Json?
+  audioUrl       String?
+  scores         Json?
+  summary        String?         @db.Text
+  strengths      Json
+  weaknesses     Json
+  recommendation Boolean?
+  status         InterviewStatus @default(IN_PROGRESS)
+  startedAt      DateTime        @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+enum Plan {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum JobStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum CandidateStatus {
+  INVITED
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  TERMINATED
+}
