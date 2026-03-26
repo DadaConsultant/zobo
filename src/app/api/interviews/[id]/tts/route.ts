@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ElevenLabsClient } from "elevenlabs";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
 const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
@@ -18,17 +18,14 @@ export async function POST(
 
     const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
 
-    const audioStream = await elevenlabs.generate({
-      voice: voiceId,
+    const audioStream = await elevenlabs.textToSpeech.convert(voiceId, {
       text,
-      model_id: "eleven_turbo_v2",
+      modelId: "eleven_turbo_v2_5",
+      outputFormat: "mp3_44100_128",
     });
 
-    const chunks: Buffer[] = [];
-    for await (const chunk of audioStream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const audioBuffer = Buffer.concat(chunks);
+    const arrayBuffer = await new Response(audioStream).arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuffer);
 
     return new NextResponse(audioBuffer, {
       headers: {

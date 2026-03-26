@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Briefcase, Users, Link2, MoreHorizontal } from "lucide-react";
+import { Plus, Briefcase, Users, Link2 } from "lucide-react";
+import CopyButton from "@/components/dashboard/copy-button";
 
 export default async function JobsPage() {
   const session = await auth();
@@ -83,7 +84,11 @@ export default async function JobsPage() {
                     <code className="text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded border border-gray-100">
                       /interview/{job.interviewLink}
                     </code>
-                    <CopyLinkButton link={job.interviewLink} />
+                    <CopyButton
+                      text={`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/interview/${job.interviewLink}`}
+                      label="Copy"
+                      variant="icon"
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-6">
@@ -97,19 +102,5 @@ export default async function JobsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function CopyLinkButton({ link }: { link: string }) {
-  return (
-    <button
-      className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-      onClick={() => {
-        // handled client-side
-      }}
-      data-link={link}
-    >
-      Copy
-    </button>
   );
 }

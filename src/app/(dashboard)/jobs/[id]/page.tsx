@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Users, Copy, Mail } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Mail } from "lucide-react";
+import CopyButton from "@/components/dashboard/copy-button";
 import { cn, getScoreBg } from "@/lib/utils";
 import JobActions from "@/components/dashboard/job-actions";
 import InviteCandidatesModal from "@/components/dashboard/invite-candidates-modal";
@@ -237,17 +238,5 @@ export default async function JobDetailPage({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function CopyButton({ text, label = "Copy Link" }: { text: string; label?: string }) {
-  return (
-    <button
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-white border border-indigo-200 rounded-lg px-3 py-2 transition-colors hover:bg-indigo-50"
-      data-copy={text}
-    >
-      <Copy className="w-3.5 h-3.5" />
-      {label}
-    </button>
   );
 }
