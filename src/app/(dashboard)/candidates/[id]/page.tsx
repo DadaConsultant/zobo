@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp, Video } from "lucide-react";
 import { cn, getScoreColor } from "@/lib/utils";
 
 interface Scores {
@@ -41,6 +41,7 @@ export default async function CandidateDetailPage({
 
   const scores = candidate.interview?.scores as Scores | null;
   const transcript = candidate.interview?.transcript as TranscriptEntry[] | null;
+  const videoUrl = candidate.interview?.videoUrl ?? null;
   const strengths = (candidate.interview?.strengths ?? []) as string[];
   const weaknesses = (candidate.interview?.weaknesses ?? []) as string[];
 
@@ -170,8 +171,28 @@ export default async function CandidateDetailPage({
             )}
           </div>
 
-          {/* Right: Summary + Transcript */}
+          {/* Right: Video + Summary + Transcript */}
           <div className="col-span-2 space-y-4">
+            {/* Video recording */}
+            {videoUrl && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Video className="w-4 h-4" />
+                    Interview Recording
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <video
+                    src={videoUrl}
+                    controls
+                    className="w-full rounded-lg bg-black"
+                    style={{ maxHeight: 360 }}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             {/* AI Summary */}
             {candidate.interview.summary && (
               <Card>

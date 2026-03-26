@@ -109,6 +109,7 @@ model Interview {
   candidateId    String          @unique
   transcript     Json?
   audioUrl       String?
+  videoUrl       String?
   scores         Json?
   summary        String?         @db.Text
   strengths      Json
