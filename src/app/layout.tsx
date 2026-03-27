@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body className={`${inter.className} bg-gray-50 antialiased`}>
+      <body className={`${inter.className} bg-gray-50 antialiased`} suppressHydrationWarning>
         {children}
       </body>
     </html>

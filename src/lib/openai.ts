@@ -38,7 +38,7 @@ ${job.customQuestions?.length ? `Custom Questions to Include:\n${job.customQuest
 
 Generate a JSON object with:
 1. An "introduction" string (AI introduces itself, the company context, and the role - 2-3 sentences)
-2. A "questions" array of 6-8 interview questions. Each question should have:
+2. A "questions" array of exactly 2 interview questions. Each question should have:
    - "id": unique string
    - "text": the question text
    - "type": one of "technical", "behavioral", "situational", "custom"

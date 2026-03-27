@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -510,17 +511,26 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       recorder.stop();
     });
 
-    // Upload video to Vercel Blob
+    // Upload video directly to Vercel Blob CDN (bypasses the 4.5 MB serverless limit)
     if (videoBlob.size > 10_000) {
-      const formData = new FormData();
-      formData.append("video", videoBlob, "interview.webm");
       try {
+        const blob = await upload(
+          `interviews/${interviewId}/recording.webm`,
+          videoBlob,
+          {
+            access: "public",
+            handleUploadUrl: `/api/interviews/${interviewId}/upload-video`,
+          }
+        );
+        // Save URL explicitly — guarantees it persists in local dev
+        // (where the Vercel CDN callback cannot reach localhost)
         await fetch(`/api/interviews/${interviewId}/upload-video`, {
-          method: "POST",
-          body: formData,
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoUrl: blob.url }),
         });
-      } catch {
-        console.error("Video upload failed — interview transcript will still be saved");
+      } catch (err) {
+        console.error("Video upload failed — transcript will still be saved:", err);
       }
     }
 
