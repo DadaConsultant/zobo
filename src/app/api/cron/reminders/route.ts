@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     });
 
     for (const interview of staleInterviews) {
-      const savedTranscript = (interview.transcript ?? []) as TranscriptEntry[];
+      const savedTranscript = (interview.transcript ?? []) as unknown as TranscriptEntry[];
       const candidateAnswers = savedTranscript.filter((t) => t.role === "candidate");
 
       let evaluation = null;
