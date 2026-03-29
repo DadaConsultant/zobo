@@ -195,6 +195,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const [followUpCount, setFollowUpCount] = useState(0);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [cameraTrackEnded, setCameraTrackEnded] = useState(false);
+  const [preparingCountdown, setPreparingCountdown] = useState<number | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Audio-only per-answer recorder
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
@@ -212,6 +214,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const isClosingRef      = useRef(false);
   const discardAudioRef   = useRef(false);
   const lastAiMessageRef  = useRef("");
+  const introAudioUrlRef  = useRef<string | null>(null);
 
   const currentQuestion = script?.questions[questionIndex];
   const totalQuestions  = script?.questions.length ?? 0;
@@ -220,6 +223,37 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
+
+  // ── Network detection ──────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const onOnline  = () => setIsOffline(false);
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener("online",  onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online",  onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  // ── Tab-close / refresh safeguard ─────────────────────────────────────────
+  // sendBeacon fires reliably even when the page is unloading.
+  // The server marks the interview ABANDONED and runs a partial evaluation.
+
+  useEffect(() => {
+    if (phase !== "interview" || !interviewId) return;
+
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon(
+        `/api/interviews/${interviewId}/abandon`,
+        new Blob([JSON.stringify({ transcript })], { type: "application/json" })
+      );
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [phase, interviewId, transcript]);
 
   // ── Entry ──────────────────────────────────────────────────────────────────
 
@@ -329,27 +363,33 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
   // ── TTS ────────────────────────────────────────────────────────────────────
 
-  const speakText = useCallback((text: string): Promise<void> => {
+  const speakText = useCallback((text: string, preloadedUrl?: string): Promise<void> => {
     lastAiMessageRef.current = text;
     setAiSpeaking(true);
 
     return new Promise(async (resolve) => {
       try {
-        const res = await fetch(`/api/interviews/${interviewId}/tts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
+        let url: string;
 
-        if (!res.ok) {
-          setAiSpeaking(false);
-          if (!isClosingRef.current && !isCameraOff) setTimeout(() => startRecordingRef.current(), 600);
-          resolve();
-          return;
+        if (preloadedUrl) {
+          url = preloadedUrl;
+        } else {
+          const res = await fetch(`/api/interviews/${interviewId}/tts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+
+          if (!res.ok) {
+            setAiSpeaking(false);
+            if (!isClosingRef.current && !isCameraOff) setTimeout(() => startRecordingRef.current(), 600);
+            resolve();
+            return;
+          }
+
+          const blob = await res.blob();
+          url = URL.createObjectURL(blob);
         }
-
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
 
         if (audioRef.current) {
           audioRef.current.src = url;
@@ -450,8 +490,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
     if (!currentQuestion) return;
     const nextQuestion  = script?.questions[questionIndex + 1] ?? null;
-    const shouldAdvance = followUpCount >= 1 ||
-      updatedTranscript.filter((t) => t.role === "candidate").length > questionIndex + 1;
+    // Advance after exactly 1 follow-up per question.
+    // totalQuestions is driven by script.questions.length — whatever GPT generated.
+    const shouldAdvance = followUpCount >= 1;
 
     let aiText = "";
     try {
@@ -547,12 +588,12 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     setPhase("complete");
   }
 
-  // ── Start interview once phase + script are ready ──────────────────────────
+  // ── Start interview: countdown + pre-fetch audio ──────────────────────────
 
   useEffect(() => {
     if (phase !== "interview" || !script || transcript.length !== 0) return;
 
-    // Start continuous video recorder
+    // Start continuous video recorder immediately
     if (videoStreamRef.current) {
       const mimeType = getVideoMimeType();
       const recorder = new MediaRecorder(
@@ -564,13 +605,45 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) videoChunksRef.current.push(e.data);
       };
-      recorder.start(1000); // collect a chunk every second
+      recorder.start(1000);
     }
 
     const fullIntro = `${script.introduction} ${script.questions[0].text}`;
-    setTranscript([{ role: "ai", content: fullIntro, timestamp: Date.now() }]);
-    speakText(fullIntro);
-  }, [phase, script, transcript.length, speakText]);
+    introAudioUrlRef.current = null;
+
+    // Pre-fetch the intro audio in the background during the countdown
+    // so it's ready to play the instant the countdown ends
+    fetch(`/api/interviews/${interviewId}/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: fullIntro }),
+    })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((blob) => {
+        if (blob) introAudioUrlRef.current = URL.createObjectURL(blob);
+      })
+      .catch(() => {});
+
+    // 3-second countdown — gives the candidate time to prepare and
+    // lets the pre-fetch complete so audio plays immediately after
+    let count = 3;
+    setPreparingCountdown(count);
+
+    const interval = setInterval(() => {
+      count--;
+      if (count <= 0) {
+        clearInterval(interval);
+        setPreparingCountdown(null);
+        setTranscript([{ role: "ai", content: fullIntro, timestamp: Date.now() }]);
+        // Play pre-fetched audio if ready, otherwise speakText fetches it
+        speakText(fullIntro, introAudioUrlRef.current ?? undefined);
+      } else {
+        setPreparingCountdown(count);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [phase, script, transcript.length, speakText, interviewId]);
 
   // ── Render: Entry ──────────────────────────────────────────────────────────
 
@@ -770,6 +843,51 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       <audio ref={audioRef} className="hidden" />
       <ParticleField />
 
+      {/* ── Interview start countdown overlay ────────────────────────────── */}
+      {preparingCountdown !== null && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center"
+          style={{ background: "rgba(2,5,12,0.96)", backdropFilter: "blur(10px)" }}>
+
+          {/* Job context */}
+          <p className="text-cyan-400/50 text-xs font-semibold tracking-widest uppercase mb-10">
+            {company} · {jobTitle}
+          </p>
+
+          {/* Countdown ring + number */}
+          <div className="relative flex items-center justify-center mb-10">
+            <svg className="absolute" width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="4" />
+              <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.6)"
+                strokeWidth="4" strokeLinecap="round"
+                strokeDasharray="440"
+                strokeDashoffset={440 - (440 * (3 - preparingCountdown) / 3)}
+                transform="rotate(-90 80 80)"
+                style={{ transition: "stroke-dashoffset 0.9s linear" }}
+              />
+            </svg>
+            <span className="text-8xl font-black tabular-nums"
+              style={{ color: "#fff", textShadow: "0 0 40px rgba(34,211,238,0.7)" }}>
+              {preparingCountdown}
+            </span>
+          </div>
+
+          {/* Message */}
+          <h2 className="text-white text-2xl font-bold mb-2">Get Ready</h2>
+          <p className="text-cyan-300/60 text-sm text-center max-w-xs">
+            Your AI interviewer is about to start.<br />Find a comfortable position and speak clearly.
+          </p>
+
+          {/* Animated dots to show loading in background */}
+          <div className="flex items-center gap-1.5 mt-8">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-400/40 animate-pulse"
+                style={{ animationDelay: `${i * 300}ms` }} />
+            ))}
+            <span className="text-cyan-400/40 text-xs ml-2">Preparing your interview…</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Camera-off blocking overlay ──────────────────────────────────── */}
       {isCameraOff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
@@ -799,6 +917,15 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Offline banner ───────────────────────────────────────────────── */}
+      {isOffline && (
+        <div className="fixed top-0 inset-x-0 z-50 flex items-center justify-center gap-2 py-2.5 text-sm font-medium"
+          style={{ background: "rgba(239,68,68,0.95)", backdropFilter: "blur(4px)" }}>
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span className="text-white">Connection lost — your progress is saved. Reconnecting…</span>
         </div>
       )}
 

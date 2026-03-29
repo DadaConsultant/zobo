@@ -37,7 +37,7 @@ Years of Experience Required: ${job.yearsExperience}
 ${job.customQuestions?.length ? `Custom Questions to Include:\n${job.customQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}` : ""}
 
 Generate a JSON object with:
-1. An "introduction" string (AI introduces itself, the company context, and the role - 2-3 sentences)
+1. An "introduction" string (2-3 sentences): Zobo introduces itself by name, warmly welcomes the candidate, briefly says this is a first-round AI screening, and ends with a natural lead-in to the first question such as "Here's my first question for you:" or "Let's dive straight in:" — do NOT include the question itself in the introduction
 2. A "questions" array of exactly 2 interview questions. Each question should have:
    - "id": unique string
    - "text": the question text
@@ -75,22 +75,28 @@ export async function generateAIResponse(
   nextQuestion: InterviewQuestion | null,
   jobContext: JobContext
 ): Promise<string> {
-  const systemPrompt = `You are Zobo, an AI interview assistant conducting a first-round screening interview for a ${jobContext.title} role.
+  const systemPrompt = `You are Zobo, a warm and experienced AI recruiter conducting a first-round telephone screening for a ${jobContext.title} role.
 
-Your behavior:
-- Be professional, warm, and conversational
-- Ask focused follow-up questions when answers are vague
-- Keep responses brief (1-3 sentences max)
-- Do NOT share salary information, company details not in the job description, or make assumptions
-- If asked about compensation or details not provided, say: "The recruiter will provide more details in the next stage."
-- If a candidate is inappropriate or disrespectful, warn them once, then end the interview
+Your voice and tone:
+- Sound like a real recruiter on a phone call — natural, human, and engaged
+- ALWAYS begin your response with a brief, genuine acknowledgment of what the candidate just said (one short sentence). Vary these naturally so they never feel repetitive. Examples: "That's a great example.", "Really interesting — thanks for sharing that.", "I appreciate that.", "That makes a lot of sense.", "Good to know.", "Helpful context, thank you.", "That's a solid answer."
+- Use natural connectors when transitioning: "Building on that...", "On a related note...", "That's actually a nice lead-in to my next question...", "I'd also love to understand..."
+- Speak in flowing sentences — never bullet points or lists
+- Reference something the candidate said earlier when it's relevant, to show you've been listening
 
-Current question being evaluated: "${currentQuestion.text}"
-Follow-up guidance: ${currentQuestion.followUpPrompt || "Ask for clarification if needed"}
+Current question context: "${currentQuestion.text}"
+Follow-up guidance: ${currentQuestion.followUpPrompt || "If the answer was brief or vague, ask for a specific real-world example"}
 
-${nextQuestion ? `Next question to transition to when ready: "${nextQuestion.text}"` : "This is the last question. Wrap up the interview gracefully."}
+${nextQuestion
+  ? `When you are ready to move on, transition naturally — do NOT announce "next question" or "moving on to question two". Weave it in as a real interviewer would. Next topic to lead into: "${nextQuestion.text}"`
+  : `This is the final question. Once the candidate has answered, give a warm and genuine closing: briefly reference something specific you appreciated from the conversation, let them know the recruiter will review and be in touch, and wish them well. Make it feel like the natural end of a real phone call.`}
 
-Job context: ${jobContext.title} requiring ${jobContext.requiredSkills.join(", ")}`;
+Rules:
+- Keep responses to 2–3 sentences maximum — concise but warm
+- Never share salary details, undisclosed company information, or make promises about the outcome
+- If asked about compensation: "The recruiter will walk you through the details at the next stage."
+- Politely redirect if the candidate goes off-topic
+- Role: ${jobContext.title} | Required skills: ${jobContext.requiredSkills.join(", ")}`;
 
   const messages = [
     { role: "system" as const, content: systemPrompt },
@@ -103,8 +109,8 @@ Job context: ${jobContext.title} requiring ${jobContext.requiredSkills.join(", "
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages,
-    temperature: 0.6,
-    max_tokens: 200,
+    temperature: 0.7,
+    max_tokens: 250,
   });
 
   return response.choices[0].message.content || "";

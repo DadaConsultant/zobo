@@ -149,4 +149,5 @@ enum InterviewStatus {
   IN_PROGRESS
   COMPLETED
   TERMINATED
+  ABANDONED
 }

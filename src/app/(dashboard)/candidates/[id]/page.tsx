@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp, Video } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp, Video, WifiOff } from "lucide-react";
 import { cn, getScoreColor } from "@/lib/utils";
 
 interface Scores {
@@ -67,8 +67,12 @@ export default async function CandidateDetailPage({
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
-            <Badge variant={candidate.status === "COMPLETED" ? "success" : "secondary"}>
-              {candidate.status.toLowerCase()}
+            <Badge variant={
+              candidate.interview?.status === "COMPLETED" ? "success" :
+              candidate.interview?.status === "ABANDONED" ? "destructive" :
+              "secondary"
+            }>
+              {candidate.interview?.status === "ABANDONED" ? "interrupted" : candidate.status.toLowerCase()}
             </Badge>
           </div>
           <p className="text-gray-500 text-sm mt-0.5">
@@ -85,7 +89,90 @@ export default async function CandidateDetailPage({
         )}
       </div>
 
-      {candidate.interview?.status !== "COMPLETED" ? (
+      {candidate.interview?.status === "ABANDONED" ? (
+        // ── Abandoned: show partial data with a clear notice ───────────────
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
+            <WifiOff className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Interview was interrupted</p>
+              <p className="text-amber-700 text-sm mt-0.5">
+                The candidate lost connection or closed the session before completing.
+                {scores
+                  ? " The data below is a partial AI evaluation based on the responses collected."
+                  : " Not enough responses were collected for a full AI evaluation."}
+              </p>
+            </div>
+          </div>
+
+          {(scores || (transcript && transcript.length > 0)) && (
+            <div className="grid grid-cols-3 gap-6">
+              <div className="col-span-1 space-y-4">
+                {scores && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <TrendingUp className="w-4 h-4" />
+                        Partial Score Breakdown
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-4">
+                      {scoreItems.map((item) => (
+                        <div key={item.label}>
+                          <div className="flex justify-between text-sm mb-1.5">
+                            <span className="text-gray-600">{item.label}</span>
+                            <span className={cn("font-bold", getScoreColor(item.value))}>
+                              {Math.round(item.value)}
+                            </span>
+                          </div>
+                          <Progress value={item.value} />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="col-span-2 space-y-4">
+                {candidate.interview?.summary && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Partial AI Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-gray-700 leading-relaxed">{candidate.interview.summary}</p>
+                    </CardContent>
+                  </Card>
+                )}
+                {transcript && transcript.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <MessageSquare className="w-4 h-4" />
+                        Partial Transcript
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3 max-h-[400px] overflow-y-auto">
+                      {transcript.map((entry, i) => (
+                        <div key={i} className={cn("flex gap-3", entry.role === "ai" ? "flex-row" : "flex-row-reverse")}>
+                          <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
+                            entry.role === "ai" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600")}>
+                            {entry.role === "ai" ? "Z" : "C"}
+                          </div>
+                          <div className={cn("max-w-[80%] px-4 py-2.5 rounded-xl text-sm",
+                            entry.role === "ai" ? "bg-indigo-50 text-indigo-900" : "bg-gray-100 text-gray-800")}>
+                            {entry.content}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : candidate.interview?.status !== "COMPLETED" ? (
         <Card>
           <CardContent className="py-16 text-center">
             <MessageSquare className="w-10 h-10 text-gray-200 mx-auto mb-3" />
