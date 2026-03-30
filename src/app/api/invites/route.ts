@@ -45,13 +45,20 @@ export async function POST(req: NextRequest) {
           data: { name, email, jobId, status: "INVITED", invitedAt: new Date() },
         });
 
-        await sendInterviewInvite({
-          candidateName: name,
-          candidateEmail: email,
-          jobTitle: job.title,
-          companyName: job.createdBy.company || "the company",
-          interviewLink: job.interviewLink,
-        });
+        try {
+          await sendInterviewInvite({
+            candidateName: name,
+            candidateEmail: email,
+            jobTitle: job.title,
+            companyName: job.createdBy.company || "the company",
+            interviewLink: job.interviewLink,
+          });
+        } catch (emailErr) {
+          console.error(`[invites] Failed to send email to ${email}:`, emailErr);
+          // Roll back the candidate record so a retry invite is possible
+          await prisma.candidate.delete({ where: { id: candidate.id } }).catch(() => null);
+          throw emailErr;
+        }
 
         return { email, candidateId: candidate.id, status: "invited" };
       })

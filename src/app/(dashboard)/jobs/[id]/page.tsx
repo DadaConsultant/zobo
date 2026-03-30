@@ -10,12 +10,14 @@ import CopyButton from "@/components/dashboard/copy-button";
 import { cn, getScoreBg } from "@/lib/utils";
 import JobActions from "@/components/dashboard/job-actions";
 import InviteCandidatesModal from "@/components/dashboard/invite-candidates-modal";
+import ResendInviteButton from "@/components/dashboard/resend-invite-button";
 
 interface CandidateWithInterview {
   id: string;
   name: string;
   email: string;
   status: string;
+  resendCount: number;
   createdAt: Date;
   interview: {
     scores: { overall: number } | null;
@@ -223,11 +225,19 @@ export default async function JobDetailPage({
                         {new Date(candidate.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {candidate.status === "COMPLETED" && (
-                          <Link href={`/candidates/${candidate.id}`}>
-                            <Button size="sm" variant="ghost">View →</Button>
-                          </Link>
-                        )}
+                        <div className="flex items-center justify-end gap-3">
+                          {candidate.status !== "COMPLETED" && (
+                            <ResendInviteButton
+                              candidateId={candidate.id}
+                              resendCount={(candidate as CandidateWithInterview).resendCount}
+                            />
+                          )}
+                          {candidate.status === "COMPLETED" && (
+                            <Link href={`/candidates/${candidate.id}`}>
+                              <Button size="sm" variant="ghost">View →</Button>
+                            </Link>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

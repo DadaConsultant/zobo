@@ -4,11 +4,26 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
   secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
+
+// Verify SMTP credentials on first use to surface misconfiguration early
+let smtpVerified = false;
+async function ensureSmtpReady() {
+  if (smtpVerified) return;
+  try {
+    await transporter.verify();
+    smtpVerified = true;
+    console.log("[email] SMTP connection verified OK");
+  } catch (err) {
+    console.error("[email] SMTP verification failed — emails will not send.", err);
+    throw new Error(`SMTP configuration error: ${(err as Error).message}`);
+  }
+}
 
 interface SendInterviewInviteParams {
   candidateName: string;
@@ -25,6 +40,7 @@ export async function sendInterviewInvite({
   companyName,
   interviewLink,
 }: SendInterviewInviteParams) {
+  await ensureSmtpReady();
   const fullLink = `${process.env.NEXT_PUBLIC_APP_URL}/interview/${interviewLink}`;
 
   await transporter.sendMail({
@@ -82,6 +98,7 @@ export async function sendInterviewReminder({
   companyName,
   interviewLink,
 }: SendInterviewInviteParams) {
+  await ensureSmtpReady();
   const fullLink = `${process.env.NEXT_PUBLIC_APP_URL}/interview/${interviewLink}`;
 
   await transporter.sendMail({

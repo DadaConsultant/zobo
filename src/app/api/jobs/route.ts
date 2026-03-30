@@ -5,12 +5,28 @@ import { generateInterviewScript } from "@/lib/openai";
 import { generateInterviewToken } from "@/lib/utils";
 import { z } from "zod";
 
+const questionSchema = z.object({
+  id: z.string(),
+  text: z.string().min(1),
+  type: z.string(),
+  followUpPrompt: z.string().optional(),
+});
+
+const approvedScriptSchema = z.object({
+  introduction: z.string(),
+  questions: z.array(questionSchema).min(1),
+  scoringRubric: z.record(z.string(), z.string()).optional(),
+});
+
 const createJobSchema = z.object({
   title: z.string().min(3),
   description: z.string().min(50),
   requiredSkills: z.array(z.string()).min(1),
   yearsExperience: z.number().min(0).max(20),
   customQuestions: z.array(z.string()).optional(),
+  // When provided the client has already reviewed/edited the GPT output —
+  // skip a second generation call and save this script directly.
+  approvedScript: approvedScriptSchema.optional(),
 });
 
 export async function GET() {
@@ -42,13 +58,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createJobSchema.parse(body);
 
-    const interviewScript = await generateInterviewScript({
-      title: data.title,
-      description: data.description,
-      requiredSkills: data.requiredSkills,
-      yearsExperience: data.yearsExperience,
-      customQuestions: data.customQuestions,
-    });
+    const interviewScript = data.approvedScript
+      ? data.approvedScript
+      : await generateInterviewScript({
+          title: data.title,
+          description: data.description,
+          requiredSkills: data.requiredSkills,
+          yearsExperience: data.yearsExperience,
+          customQuestions: data.customQuestions,
+        });
 
     const interviewLink = generateInterviewToken(data.title);
 
