@@ -88,14 +88,15 @@ model Job {
 }
 
 model Candidate {
-  id        String          @id @default(cuid())
-  name      String
-  email     String
-  jobId     String
-  status    CandidateStatus @default(PENDING)
-  invitedAt DateTime?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id          String          @id @default(cuid())
+  name        String
+  email       String
+  jobId       String
+  status      CandidateStatus @default(PENDING)
+  invitedAt   DateTime?
+  resendCount Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   job       Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
   interview Interview?
