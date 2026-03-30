@@ -237,18 +237,31 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     };
   }, []);
 
-  // ── Tab-close / refresh safeguard ─────────────────────────────────────────
-  // sendBeacon fires reliably even when the page is unloading.
-  // The server marks the interview ABANDONED and runs a partial evaluation.
+  // ── Leave-page protection ──────────────────────────────────────────────────
+  // Active during two phases:
+  //   "interview" — block + fire abandon beacon so the server saves partial data
+  //   "uploading" — block only, to prevent the video upload being cut off
+  //
+  // e.preventDefault() + e.returnValue = "" triggers the browser's native
+  // "Leave site? Changes you made may not be saved." dialog in all modern
+  // browsers. Custom messages are ignored by browsers for security reasons.
 
   useEffect(() => {
-    if (phase !== "interview" || !interviewId) return;
+    const shouldBlock = phase === "interview" || phase === "uploading";
+    if (!shouldBlock) return;
 
-    const handleBeforeUnload = () => {
-      navigator.sendBeacon(
-        `/api/interviews/${interviewId}/abandon`,
-        new Blob([JSON.stringify({ transcript })], { type: "application/json" })
-      );
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Show the browser's native leave-site warning
+      e.preventDefault();
+      e.returnValue = "";
+
+      // During the interview, also beacon the server to save partial data
+      if (phase === "interview" && interviewId) {
+        navigator.sendBeacon(
+          `/api/interviews/${interviewId}/abandon`,
+          new Blob([JSON.stringify({ transcript })], { type: "application/json" })
+        );
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
