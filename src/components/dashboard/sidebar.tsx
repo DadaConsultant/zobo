@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, LogOut, ShieldCheck } from "lucide-react";
 
 interface SidebarProps {
   user: {
@@ -12,6 +12,7 @@ interface SidebarProps {
     email?: string | null;
     image?: string | null;
   };
+  role?: string | null;
 }
 
 function ZoboMark() {
@@ -33,7 +34,7 @@ const navItems = [
   { href: "/jobs",      label: "Jobs",     icon: Briefcase },
 ];
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, role }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -66,6 +67,26 @@ export default function Sidebar({ user }: SidebarProps) {
             </Link>
           );
         })}
+
+        {role === "ADMIN" && (
+          <>
+            <div className="pt-3 pb-1 px-3">
+              <span className="text-xs font-bold text-white/25 uppercase tracking-widest">Admin</span>
+            </div>
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                pathname.startsWith("/admin")
+                  ? "bg-white/10 text-white"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              <ShieldCheck className={cn("w-4 h-4", pathname.startsWith("/admin") ? "text-[#4FD1C7]" : "text-white/40")} />
+              Admin Panel
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* User */}

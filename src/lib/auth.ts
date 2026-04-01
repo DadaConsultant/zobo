@@ -35,17 +35,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image,
+          role: user.role,
+          status: user.status,
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      // On sign-in the full user object is present — pull role/status directly
+      if (user) {
+        token.id = user.id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        token.role = (user as any).role;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        token.status = (user as any).status;
+      }
+
+      // If the token exists but role/status are missing (stale session or
+      // first request after schema migration) — re-fetch from the database
+      if (token.id && (!token.role || !token.status)) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, status: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.status = dbUser.status;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) session.user.id = token.id as string;
+      if (token?.id)     session.user.id     = token.id     as string;
+      if (token?.role)   session.user.role   = token.role   as "USER" | "ADMIN";
+      if (token?.status) session.user.status = token.status as "PENDING" | "APPROVED" | "SUSPENDED";
       return session;
     },
   },

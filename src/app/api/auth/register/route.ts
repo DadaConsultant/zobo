@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendAdminNewUserNotification } from "@/lib/email";
 import { z } from "zod";
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "support@zobojobs.com";
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -22,10 +25,34 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, company },
-      select: { id: true, name: true, email: true },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        company,
+        role: isAdmin ? "ADMIN" : "USER",
+        status: isAdmin ? "APPROVED" : "PENDING",
+      },
+      select: { id: true, name: true, email: true, role: true, status: true },
     });
+
+    // Notify admin about new company registration (skip for admin self-registration)
+    if (!isAdmin) {
+      try {
+        await sendAdminNewUserNotification({
+          userName: name,
+          userEmail: email,
+          company,
+          userId: user.id,
+        });
+      } catch (emailErr) {
+        console.error("[register] Failed to send admin notification:", emailErr);
+        // Non-fatal — user is still created
+      }
+    }
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {

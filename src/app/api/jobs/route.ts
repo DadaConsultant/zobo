@@ -54,6 +54,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (session.user.role !== "ADMIN" && session.user.status !== "APPROVED") {
+    return NextResponse.json(
+      { error: "Your account is pending approval. You cannot create jobs until an admin approves your account." },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const data = createJobSchema.parse(body);
