@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Users, CheckCircle, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Briefcase, Users, CheckCircle, TrendingUp, Plus, ArrowRight, Clock, AlertTriangle } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -38,8 +38,40 @@ export default async function DashboardPage() {
     { label: "Completion Rate",   value: `${completionRate}%`,                             icon: TrendingUp,   color: "text-[#1F2937]",  bg: "bg-[#1F2937]/10" },
   ];
 
+  const userStatus = session?.user?.status;
+  const isPending   = userStatus === "PENDING";
+  const isSuspended = userStatus === "SUSPENDED";
+  const isBlocked   = isPending || isSuspended;
+
   return (
     <div className="p-8">
+      {/* Pending / Suspended banner */}
+      {isPending && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Account pending approval</p>
+            <p className="text-sm text-amber-700 mt-0.5">
+              Your account is under review. You will receive an email at <strong>{session?.user?.email}</strong> once
+              an admin approves your profile. Job creation will be enabled after approval.
+            </p>
+          </div>
+        </div>
+      )}
+      {isSuspended && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">Account suspended</p>
+            <p className="text-sm text-red-700 mt-0.5">
+              Your account has been suspended. Please contact{" "}
+              <a href="mailto:support@zobojobs.com" className="underline font-medium">support@zobojobs.com</a>{" "}
+              for assistance.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -48,12 +80,21 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-gray-500 mt-1">Here&apos;s what&apos;s happening with your hiring</p>
         </div>
-        <Link href="/jobs/new">
-          <Button>
-            <Plus className="w-4 h-4" />
-            Create Job
-          </Button>
-        </Link>
+        {isBlocked ? (
+          <div title={isPending ? "Awaiting admin approval" : "Account suspended"}>
+            <Button disabled className="opacity-50 cursor-not-allowed">
+              <Plus className="w-4 h-4" />
+              Create Job
+            </Button>
+          </div>
+        ) : (
+          <Link href="/jobs/new">
+            <Button>
+              <Plus className="w-4 h-4" />
+              Create Job
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
@@ -87,12 +128,14 @@ export default async function DashboardPage() {
               <Briefcase className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 font-medium">No jobs yet</p>
               <p className="text-gray-400 text-sm mb-4">Create your first job to start interviewing candidates</p>
-              <Link href="/jobs/new">
-                <Button size="sm">
-                  <Plus className="w-4 h-4" />
-                  Create First Job
-                </Button>
-              </Link>
+              {!isBlocked && (
+                <Link href="/jobs/new">
+                  <Button size="sm">
+                    <Plus className="w-4 h-4" />
+                    Create First Job
+                  </Button>
+                </Link>
+              )}
             </div>
           ) : (
             <table className="w-full">
