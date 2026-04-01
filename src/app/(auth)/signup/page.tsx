@@ -48,20 +48,28 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">Z</span>
+            <div className="w-9 h-9 bg-[#1F2937] rounded-xl flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="8"  r="4" fill="#fff" />
+                <circle cx="8"  cy="28" r="4" fill="#fff" />
+                <circle cx="32" cy="28" r="4" fill="#fff" />
+                <circle cx="20" cy="20" r="3" fill="#4FD1C7" />
+                <line x1="20" y1="12" x2="20" y2="17" stroke="#fff" strokeWidth="1.5" />
+                <line x1="17" y1="22" x2="10" y2="26" stroke="#fff" strokeWidth="1.5" />
+                <line x1="23" y1="22" x2="30" y2="26" stroke="#fff" strokeWidth="1.5" />
+              </svg>
             </div>
-            <span className="text-xl font-bold text-gray-900">Zobo Jobs</span>
+            <span className="text-xl font-bold text-[#1A1A1A]">Zobo Jobs</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-500 mt-1">Start screening candidates with AI</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Create your account</h1>
+          <p className="text-[#6B7280] mt-1">Start screening candidates with AI</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -87,15 +95,15 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" size="lg" loading={loading}>
               Create Account
             </Button>
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-[#9CA3AF] text-center">
               By signing up, you agree to our Terms of Service and Privacy Policy.
             </p>
           </form>
         </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-[#6B7280] mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-indigo-600 font-medium hover:underline">
+          <Link href="/login" className="text-[#4FD1C7] font-medium hover:underline">
             Sign in
           </Link>
         </p>

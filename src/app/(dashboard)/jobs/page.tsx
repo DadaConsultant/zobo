@@ -61,7 +61,7 @@ export default async function JobsPage() {
                 : 0;
 
             return (
-              <div key={job.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex items-center justify-between hover:border-indigo-200 transition-colors">
+              <div key={job.id} className="bg-white rounded-xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-6 flex items-center justify-between hover:border-[#1F2937]/30 transition-colors">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-lg font-semibold text-gray-900">{job.title}</h2>

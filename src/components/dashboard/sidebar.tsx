@@ -4,14 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Briefcase,
-  Users,
-  LogOut,
-  Settings,
-  Zap,
-} from "lucide-react";
+import { LayoutDashboard, Briefcase, LogOut } from "lucide-react";
 
 interface SidebarProps {
   user: {
@@ -21,23 +14,35 @@ interface SidebarProps {
   };
 }
 
+function ZoboMark() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="8"  r="4" fill="#FFFFFF" />
+      <circle cx="8"  cy="28" r="4" fill="#FFFFFF" />
+      <circle cx="32" cy="28" r="4" fill="#FFFFFF" />
+      <circle cx="20" cy="20" r="3" fill="#4FD1C7" />
+      <line x1="20" y1="12" x2="20" y2="17" stroke="#FFFFFF" strokeWidth="1.5" />
+      <line x1="17" y1="22" x2="10" y2="26" stroke="#FFFFFF" strokeWidth="1.5" />
+      <line x1="23" y1="22" x2="30" y2="26" stroke="#FFFFFF" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/jobs", label: "Jobs", icon: Briefcase },
+  { href: "/jobs",      label: "Jobs",     icon: Briefcase },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-full">
+    <aside className="w-64 bg-[#1F2937] flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-100">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-gray-900">Zobo Jobs</span>
+      <div className="p-6 border-b border-white/10">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <ZoboMark />
+          <span className="text-lg font-bold text-white">Zobo Jobs</span>
         </Link>
       </div>
 
@@ -52,11 +57,11 @@ export default function Sidebar({ user }: SidebarProps) {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 active
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-white/10 text-white"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
               )}
             >
-              <Icon className={cn("w-4 h-4", active ? "text-indigo-600" : "text-gray-400")} />
+              <Icon className={cn("w-4 h-4", active ? "text-[#4FD1C7]" : "text-white/40")} />
               {label}
             </Link>
           );
@@ -64,19 +69,19 @@ export default function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold text-sm">
+          <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-[#4FD1C7] font-semibold text-sm">
             {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{user.name || "Recruiter"}</p>
-            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+            <p className="text-sm font-medium text-white truncate">{user.name || "Recruiter"}</p>
+            <p className="text-xs text-white/40 truncate">{user.email}</p>
           </div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-red-50"
+          className="flex items-center gap-2 text-sm text-white/50 hover:text-red-400 transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-white/5"
         >
           <LogOut className="w-4 h-4" />
           Sign out
