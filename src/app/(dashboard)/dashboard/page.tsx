@@ -32,10 +32,10 @@ export default async function DashboardPage() {
     totalCandidates > 0 ? Math.round((completedInterviews / totalCandidates) * 100) : 0;
 
   const stats = [
-    { label: "Active Jobs", value: jobs.filter((j) => j.status === "ACTIVE").length, icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "Total Candidates", value: totalCandidates, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Interviews Done", value: completedInterviews, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Completion Rate", value: `${completionRate}%`, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "Active Jobs",       value: jobs.filter((j) => j.status === "ACTIVE").length, icon: Briefcase,   color: "text-[#1F2937]",  bg: "bg-[#1F2937]/10" },
+    { label: "Total Candidates",  value: totalCandidates,                                  icon: Users,        color: "text-[#0D9488]",  bg: "bg-[#4FD1C7]/15" },
+    { label: "Interviews Done",   value: completedInterviews,                              icon: CheckCircle,  color: "text-green-600",  bg: "bg-green-50"     },
+    { label: "Completion Rate",   value: `${completionRate}%`,                             icon: TrendingUp,   color: "text-[#1F2937]",  bg: "bg-[#1F2937]/10" },
   ];
 
   return (
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Jobs</CardTitle>
-          <Link href="/jobs" className="text-sm text-indigo-600 font-medium hover:underline flex items-center gap-1">
+          <Link href="/jobs" className="text-sm text-[#4FD1C7] font-medium hover:underline flex items-center gap-1">
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </CardHeader>
