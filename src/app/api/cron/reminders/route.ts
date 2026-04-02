@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { sendInterviewReminder } from "@/lib/email";
 import { evaluateInterview, type TranscriptEntry } from "@/lib/openai";
 
+/** Batch reminders + SMTP; needs headroom on Vercel */
+export const maxDuration = 60;
+
 // Vercel calls this route daily at 9am UTC (configured in vercel.json).
 // It finds all invited/pending candidates who haven't completed their interview
 // and sends a reminder at the 24h and 48h marks.
