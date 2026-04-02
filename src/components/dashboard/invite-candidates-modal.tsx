@@ -15,7 +15,12 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<{ invited: number; total: number } | null>(null);
+  const [success, setSuccess] = useState<{
+    invited: number;
+    total: number;
+    alreadyInvited: number;
+    failed: number;
+  } | null>(null);
   const [candidates, setCandidates] = useState([{ name: "", email: "" }]);
 
   function addRow() {
@@ -46,7 +51,13 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
     setLoading(false);
 
     if (res.ok) {
-      setSuccess({ invited: data.summary.invited, total: data.summary.total });
+      const s = data.summary;
+      setSuccess({
+        invited: s.invited,
+        total: s.total,
+        alreadyInvited: s.alreadyInvited ?? 0,
+        failed: s.failed ?? 0,
+      });
       router.refresh();
     }
   }
@@ -99,6 +110,20 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
                 <h3 className="text-lg font-bold text-gray-900 mb-1">Invites Sent!</h3>
                 <p className="text-gray-500">
                   {success.invited} of {success.total} candidates were successfully invited.
+                  {success.invited === 0 && success.total > 0 && (
+                    <>
+                      {success.alreadyInvited > 0 && (
+                        <span className="block mt-2">
+                          {success.alreadyInvited} {success.alreadyInvited === 1 ? "was" : "were"} already invited for this job.
+                        </span>
+                      )}
+                      {success.failed > 0 && (
+                        <span className="block mt-2 text-amber-700">
+                          {success.failed} {success.failed === 1 ? "invite" : "invites"} could not be sent (check server email settings).
+                        </span>
+                      )}
+                    </>
+                  )}
                 </p>
                 <Button className="mt-6" onClick={close}>Done</Button>
               </div>
