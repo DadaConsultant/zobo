@@ -3,6 +3,7 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetOTP } from "@/lib/email";
+import { rateLimitAuthSensitive } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -17,6 +18,9 @@ function generateOTP(): string {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await rateLimitAuthSensitive(req);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { email } = schema.parse(body);

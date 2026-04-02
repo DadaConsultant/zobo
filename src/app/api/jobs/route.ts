@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateInterviewScript } from "@/lib/openai";
 import { generateInterviewToken } from "@/lib/utils";
+import { rateLimitOpenAiRecruiter } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const questionSchema = z.object({
@@ -60,6 +61,9 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     );
   }
+
+  const limited = await rateLimitOpenAiRecruiter(req, session.user.id);
+  if (limited) return limited;
 
   try {
     const body = await req.json();

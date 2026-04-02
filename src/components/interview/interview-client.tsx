@@ -177,8 +177,19 @@ function getAudioMimeType(): string {
   }) ?? "";
 }
 
+const interviewGateStorageKey = (linkToken: string) => `zobo_interview_gate_${linkToken}`;
+
+function displayNameFromVerify(apiName: unknown, candidateEmail: string): string {
+  if (typeof apiName === "string" && apiName.trim()) return apiName.trim();
+  const local = candidateEmail.split("@")[0]?.trim();
+  return local || "Candidate";
+}
+
 export default function InterviewClient({ token, jobTitle, company }: InterviewClientProps) {
   const [phase, setPhase] = useState<Phase>("entry");
+  /** 1 = enter email, 2 = verified — continue to camera */
+  const [entryStep, setEntryStep] = useState<1 | 2>(1);
+  const [sessionRestoreDone, setSessionRestoreDone] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -237,6 +248,46 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     };
   }, []);
 
+  // Restore verified email from this browser session (same tab / refresh)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(interviewGateStorageKey(token));
+      if (!raw) {
+        setSessionRestoreDone(true);
+        return;
+      }
+      const parsed = JSON.parse(raw) as { email?: string };
+      const storedEmail = parsed?.email?.trim();
+      if (!storedEmail) {
+        setSessionRestoreDone(true);
+        return;
+      }
+      setEmail(storedEmail);
+      void (async () => {
+        try {
+          const res = await fetch("/api/interviews/verify-candidate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, email: storedEmail }),
+          });
+          const data = await res.json();
+          if (res.ok && data.verified) {
+            setName(displayNameFromVerify(data.name, storedEmail));
+            setEntryStep(2);
+          } else {
+            sessionStorage.removeItem(interviewGateStorageKey(token));
+          }
+        } catch {
+          sessionStorage.removeItem(interviewGateStorageKey(token));
+        } finally {
+          setSessionRestoreDone(true);
+        }
+      })();
+    } catch {
+      setSessionRestoreDone(true);
+    }
+  }, [token]);
+
   // ── Leave-page protection ──────────────────────────────────────────────────
   // Active during two phases:
   //   "interview" — block + fire abandon beacon so the server saves partial data
@@ -270,7 +321,38 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
   // ── Entry ──────────────────────────────────────────────────────────────────
 
-  async function handleEntry(e: React.FormEvent) {
+  async function handleVerifyEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const res = await fetch("/api/interviews/verify-candidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, email: email.trim() }),
+    });
+
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : "Verification failed");
+      return;
+    }
+
+    setName(displayNameFromVerify(data.name, email.trim()));
+    try {
+      sessionStorage.setItem(
+        interviewGateStorageKey(token),
+        JSON.stringify({ email: email.trim().toLowerCase() })
+      );
+    } catch {
+      // private mode / quota — continue without persistence
+    }
+    setEntryStep(2);
+  }
+
+  async function handleStartAfterVerify(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -278,14 +360,18 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     const res = await fetch("/api/interviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, name, email }),
+      body: JSON.stringify({ token, email: email.trim() }),
     });
 
     const data = await res.json();
     setLoading(false);
 
-    if (!res.ok) { setError(data.error || "Failed to start"); return; }
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : "Failed to start");
+      return;
+    }
 
+    if (typeof data.name === "string" && data.name) setName(data.name);
     setInterviewId(data.interviewId);
     setScript(data.interviewScript as InterviewScript);
     setPhase("permission");
@@ -661,6 +747,17 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Render: Entry ──────────────────────────────────────────────────────────
 
   if (phase === "entry") {
+    if (!sessionRestoreDone) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 text-cyan-500 animate-spin mx-auto mb-4" />
+            <p className="text-gray-500 text-sm">Loading…</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="w-full max-w-md">
@@ -673,22 +770,65 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             <p className="text-sm text-gray-400">{company}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Let&apos;s get started</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              This interview takes ~10–15 minutes and is fully recorded. You&apos;ll need a camera and microphone.
-            </p>
-            <form onSubmit={handleEntry} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="Jane Doe" value={name} onChange={(e) => setName(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="jane@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>}
-              <Button type="submit" className="w-full" size="lg" loading={loading}>Continue</Button>
-            </form>
+            {entryStep === 1 ? (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">Confirm your invite</h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  Enter the <strong>same email address</strong> the company used to invite you. Only registered candidates can start this interview.
+                </p>
+                <form onSubmit={handleVerifyEmail} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>}
+                  <Button type="submit" className="w-full" size="lg" loading={loading}>
+                    Continue
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">You&apos;re all set</h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  This interview takes ~10–15 minutes and is fully recorded. You&apos;ll need a camera and microphone.
+                </p>
+                <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 mb-6">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Interviewing as</p>
+                  <p className="text-base font-semibold text-gray-900">{name}</p>
+                  <p className="text-sm text-gray-500 mt-1">{email}</p>
+                </div>
+                <form onSubmit={handleStartAfterVerify} className="space-y-4">
+                  {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">{error}</div>}
+                  <Button type="submit" className="w-full" size="lg" loading={loading}>
+                    Start interview setup
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEntryStep(1);
+                      setError("");
+                      try {
+                        sessionStorage.removeItem(interviewGateStorageKey(token));
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Use a different email
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>

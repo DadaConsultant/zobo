@@ -92,6 +92,10 @@ Open [http://localhost:3000](http://localhost:3000)
 | `SMTP_PASS` | Your email app password |
 | `EMAIL_FROM` | e.g. `Zobo Jobs <noreply@yourdomain.com>` |
 | `CRON_SECRET` | Run `openssl rand -base64 32` |
+| `UPSTASH_REDIS_REST_URL` | [Upstash Redis](https://console.upstash.com) REST URL — powers API rate limiting (auth, OpenAI, ElevenLabs routes). If omitted, limits are skipped (fine for local dev). |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (pair with URL above). |
+
+**Rate limits (when Upstash is configured):** register / forgot-password / reset-password share **10 requests per 15 minutes per IP**; credentials sign-in **30 per 15 minutes per IP**; recruiter OpenAI (job create + script preview) **40 per hour per user**; candidate interview OpenAI (message, STT, complete, abandon) **200 per hour per IP**; ElevenLabs TTS **150 per hour per IP**. All return **429** with a `Retry-After` header when exceeded.
 
 ---
 

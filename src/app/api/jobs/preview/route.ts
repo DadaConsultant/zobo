@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateInterviewScript } from "@/lib/openai";
+import { rateLimitOpenAiRecruiter } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const previewSchema = z.object({
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     );
   }
+
+  const limited = await rateLimitOpenAiRecruiter(req, session.user.id);
+  if (limited) return limited;
 
   try {
     const body = await req.json();

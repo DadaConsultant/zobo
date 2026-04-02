@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { rateLimitElevenLabs } from "@/lib/rate-limit";
 
 const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
@@ -9,6 +10,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await rateLimitElevenLabs(req);
+  if (limited) return limited;
+
   try {
     const { text } = await req.json();
 
