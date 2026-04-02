@@ -8,10 +8,9 @@ import {
 } from "@/lib/interview-candidate-gate";
 import { rateLimitOpenAiInterview } from "@/lib/rate-limit";
 
-const startSchema = z.object({
+const schema = z.object({
   token: z.string().min(1),
   email: z.string().email(),
-  name: z.string().min(2).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,10 +19,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { token, email, name: nameOverride } = startSchema.parse(body);
+    const { token, email } = schema.parse(body);
 
     const job = await prisma.job.findUnique({
       where: { interviewLink: token },
+      select: { id: true, status: true },
     });
 
     if (!job || job.status !== "ACTIVE") {
@@ -33,32 +33,23 @@ export async function POST(req: NextRequest) {
     const gate = await assertCandidateEligibleForInterview(job.id, email);
     if (!gate.ok) {
       if (gate.error === "COMPLETED") {
-        return NextResponse.json({ error: INTERVIEW_MSG_COMPLETED }, { status: 403 });
+        return NextResponse.json({ verified: false, code: "COMPLETED", error: INTERVIEW_MSG_COMPLETED }, { status: 403 });
       }
-      return NextResponse.json({ error: INTERVIEW_MSG_NOT_REGISTERED }, { status: 403 });
-    }
-
-    const { candidate } = gate;
-    const displayName = nameOverride?.trim() || candidate.name;
-
-    let interview = gate.interview;
-    if (!interview) {
-      interview = await prisma.interview.create({
-        data: { candidateId: candidate.id, strengths: [], weaknesses: [] },
-      });
+      return NextResponse.json(
+        { verified: false, code: "NOT_REGISTERED", error: INTERVIEW_MSG_NOT_REGISTERED },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json({
-      interviewId: interview.id,
-      candidateId: candidate.id,
-      jobTitle: job.title,
-      interviewScript: job.interviewScript,
-      name: displayName,
+      verified: true,
+      name: gate.candidate.name,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    return NextResponse.json({ error: "Failed to start interview" }, { status: 500 });
+    console.error("[verify-candidate]", error);
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 }

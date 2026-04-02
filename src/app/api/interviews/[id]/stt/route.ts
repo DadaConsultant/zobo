@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { toFile } from "openai";
+import { rateLimitOpenAiInterview } from "@/lib/rate-limit";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await rateLimitOpenAiInterview(req);
+  if (limited) return limited;
+
   try {
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File;

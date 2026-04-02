@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendAdminNewUserNotification } from "@/lib/email";
+import { rateLimitAuthSensitive } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "support@zobojobs.com";
@@ -14,6 +15,9 @@ const registerSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const limited = await rateLimitAuthSensitive(req);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { name, email, password, company } = registerSchema.parse(body);

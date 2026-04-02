@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { rateLimitAuthSensitive } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -10,6 +11,9 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const limited = await rateLimitAuthSensitive(req);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { email, otp, newPassword } = schema.parse(body);

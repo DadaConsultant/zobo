@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evaluateInterview, type TranscriptEntry } from "@/lib/openai";
+import { rateLimitOpenAiInterview } from "@/lib/rate-limit";
 
 /**
  * POST /api/interviews/[id]/abandon
@@ -19,6 +20,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await rateLimitOpenAiInterview(req);
+  if (limited) return limited;
+
   try {
     const { id } = await params;
 

@@ -212,7 +212,7 @@ export default function HomePage() {
           <div style={{ display: "flex", gap: 48, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
             {["TechStart", "HireScale", "Foundry", "TalentOps", "SprintHQ"].map((name) => (
               <div key={name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, background: "#F5F7FA", borderRadius: 6, border: "1px solid #E5E7EB" }} />
+                {/* <div style={{ width: 28, height: 28, background: "#F5F7FA", borderRadius: 6, border: "1px solid #E5E7EB" }} /> */}
                 <span style={{ fontSize: 16, fontWeight: 700, color: "#D1D5DB", letterSpacing: "-0.3px" }}>{name}</span>
               </div>
             ))}
@@ -322,7 +322,7 @@ export default function HomePage() {
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", marginBottom: 12 }}>{item.title}</h3>
                 <p style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.7 }}>{item.desc}</p>
                 {i < 3 && (
-                  <ChevronRight size={20} color="#D1D5DB" style={{ position: "absolute", right: -12, top: "50%", transform: "translateY(-50%)", zIndex: 1 }} />
+                  <ChevronRight size={50} color="#D1D5DB" style={{ position: "absolute", right: -38, top: "50%", transform: "translateY(-50%)", zIndex: 1 }} />
                 )}
               </div>
             ))}
