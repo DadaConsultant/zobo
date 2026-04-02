@@ -18,11 +18,8 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: smtpPort,
   // port 465 uses implicit TLS; 587 uses STARTTLS
-  secure: smtpPort === 465,
-  requireTLS: smtpPort !== 465,
-  connectionTimeout: 10000,  // fail fast — 10 s instead of OS default ~90 s
-  greetingTimeout: 8000,
-  socketTimeout: 10000,
+  secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
