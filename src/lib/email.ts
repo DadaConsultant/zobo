@@ -1,5 +1,18 @@
 import nodemailer from "nodemailer";
 
+function requireSmtpEnv(): void {
+  const missing: string[] = [];
+  if (!process.env.SMTP_HOST?.trim()) missing.push("SMTP_HOST");
+  if (!process.env.SMTP_USER?.trim()) missing.push("SMTP_USER");
+  if (!process.env.SMTP_PASS?.trim()) missing.push("SMTP_PASS");
+  if (!process.env.EMAIL_FROM?.trim()) missing.push("EMAIL_FROM");
+  if (missing.length) {
+    throw new Error(
+      `Missing email environment variables: ${missing.join(", ")}. Set them in production (e.g. host, credentials, verified from-address).`
+    );
+  }
+}
+
 const smtpPort = Number(process.env.SMTP_PORT) || 587;
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -20,6 +33,7 @@ const transporter = nodemailer.createTransport({
 let smtpVerified = false;
 async function ensureSmtpReady() {
   if (smtpVerified) return;
+  requireSmtpEnv();
   try {
     await transporter.verify();
     smtpVerified = true;

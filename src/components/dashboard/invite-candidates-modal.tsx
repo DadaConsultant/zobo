@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, X, Plus, Upload, CheckCircle } from "lucide-react";
+import { Mail, X, Plus, Upload, CheckCircle, AlertCircle } from "lucide-react";
 
 interface InviteCandidatesModalProps {
   jobId: string;
@@ -106,8 +106,27 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
 
             {success ? (
               <div className="p-8 text-center">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Invites Sent!</h3>
+                {success.invited === success.total ? (
+                  <>
+                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Invites sent</h3>
+                  </>
+                ) : success.invited > 0 ? (
+                  <>
+                    <CheckCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Partially complete</h3>
+                  </>
+                ) : success.failed > 0 ? (
+                  <>
+                    <AlertCircle className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Invites could not be sent</h3>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">No new invites</h3>
+                  </>
+                )}
                 <p className="text-gray-500">
                   {success.invited} of {success.total} candidates were successfully invited.
                   {success.invited === 0 && success.total > 0 && (
@@ -119,7 +138,9 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
                       )}
                       {success.failed > 0 && (
                         <span className="block mt-2 text-amber-700">
-                          {success.failed} {success.failed === 1 ? "invite" : "invites"} could not be sent (check server email settings).
+                          {success.failed === 1
+                            ? "We couldn’t send that invitation email. Please try again in a few minutes. If it keeps failing, contact support."
+                            : `We couldn’t send ${success.failed} invitation emails. Please try again in a few minutes. If it keeps failing, contact support.`}
                         </span>
                       )}
                     </>
