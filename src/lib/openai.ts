@@ -38,7 +38,7 @@ ${job.customQuestions?.length ? `Custom Questions to Include:\n${job.customQuest
 
 Generate a JSON object with:
 1. An "introduction" string (2-3 sentences): Zobo introduces itself by name, warmly welcomes the candidate, briefly says this is a first-round AI screening, and ends with a natural lead-in to the first question such as "Here's my first question for you:" or "Let's dive straight in:" — do NOT include the question itself in the introduction
-2. A "questions" array of exactly 2 interview questions. Each question should have:
+2. A "questions" array of 6-8 interview questions. Each question should have:
    - "id": unique string
    - "text": the question text
    - "type": one of "technical", "behavioral", "situational", "custom"

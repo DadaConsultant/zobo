@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import type { MutableRefObject } from "react";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,6 +178,75 @@ function getAudioMimeType(): string {
   }) ?? "";
 }
 
+/**
+ * Full-session recording: one stream with camera video + mixed audio (mic + AI TTS from <audio>).
+ * Per-answer STT must keep using the raw camera mic stream, not this mix.
+ */
+function buildFullSessionRecordingStream(
+  cameraStream: MediaStream,
+  aiAudioEl: HTMLAudioElement,
+  ctxRef: MutableRefObject<AudioContext | null>,
+  composedRef: MutableRefObject<MediaStream | null>
+): MediaStream {
+  if (composedRef.current) return composedRef.current;
+
+  const videoTrack = cameraStream.getVideoTracks()[0];
+  const micTracks = cameraStream.getAudioTracks();
+  if (!videoTrack || micTracks.length === 0) return cameraStream;
+
+  const AC =
+    typeof window !== "undefined"
+      ? window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      : undefined;
+  if (!AC) return cameraStream;
+
+  try {
+    const ctx = new AC();
+    ctxRef.current = ctx;
+    void ctx.resume();
+
+    const destination = ctx.createMediaStreamDestination();
+    const micSrc = ctx.createMediaStreamSource(new MediaStream(micTracks));
+    const micGain = ctx.createGain();
+    micGain.gain.value = 1;
+    micSrc.connect(micGain);
+    // Record mic only — do not connect mic to ctx.destination or the candidate hears
+    // themselves delayed (echo) through the speakers.
+    micGain.connect(destination);
+
+    const elSrc = ctx.createMediaElementSource(aiAudioEl);
+    const aiGain = ctx.createGain();
+    aiGain.gain.value = 1;
+    elSrc.connect(aiGain);
+    aiGain.connect(destination);
+    aiGain.connect(ctx.destination);
+
+    const mixedAudio = destination.stream.getAudioTracks()[0];
+    if (!mixedAudio) {
+      ctx.close();
+      ctxRef.current = null;
+      return cameraStream;
+    }
+
+    const out = new MediaStream([videoTrack, mixedAudio]);
+    composedRef.current = out;
+    return out;
+  } catch (err) {
+    console.warn("[interview] Full-session audio mix unavailable, using microphone only:", err);
+    return cameraStream;
+  }
+}
+
+function disposeFullSessionRecordingAudio(ctxRef: MutableRefObject<AudioContext | null>) {
+  try {
+    ctxRef.current?.close();
+  } catch {
+    /* ignore */
+  }
+  ctxRef.current = null;
+}
+
 const interviewGateStorageKey = (linkToken: string) => `zobo_interview_gate_${linkToken}`;
 
 function displayNameFromVerify(apiName: unknown, candidateEmail: string): string {
@@ -216,6 +286,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const videoStreamRef    = useRef<MediaStream | null>(null);
   const videoRecorderRef  = useRef<MediaRecorder | null>(null);
   const videoChunksRef    = useRef<Blob[]>([]);
+  /** Web Audio graph for mic + TTS → full-session MediaRecorder */
+  const recordingAudioContextRef = useRef<AudioContext | null>(null);
+  const recordingComposedStreamRef = useRef<MediaStream | null>(null);
   // Playback
   const audioRef          = useRef<HTMLAudioElement | null>(null);
   // Helpers
@@ -681,7 +754,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       body: JSON.stringify({ transcript: finalTranscript }),
     });
 
-    // Release camera + mic
+    // Release camera + mic + recording mix graph
+    disposeFullSessionRecordingAudio(recordingAudioContextRef);
+    recordingComposedStreamRef.current = null;
     videoStreamRef.current?.getTracks().forEach((t) => t.stop());
 
     setPhase("complete");
@@ -692,11 +767,24 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   useEffect(() => {
     if (phase !== "interview" || !script || transcript.length !== 0) return;
 
-    // Start continuous video recorder immediately
-    if (videoStreamRef.current) {
+    // Start continuous video recorder (video + mixed mic + AI TTS for employers)
+    const startRecorder = () => {
+      if (!videoStreamRef.current) return;
+      const cam = videoStreamRef.current;
+      const el = audioRef.current;
+      const streamForRecorder =
+        el != null
+          ? buildFullSessionRecordingStream(
+              cam,
+              el,
+              recordingAudioContextRef,
+              recordingComposedStreamRef
+            )
+          : cam;
+
       const mimeType = getVideoMimeType();
       const recorder = new MediaRecorder(
-        videoStreamRef.current,
+        streamForRecorder,
         mimeType ? { mimeType } : undefined
       );
       videoRecorderRef.current = recorder;
@@ -705,7 +793,16 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
         if (e.data.size > 0) videoChunksRef.current.push(e.data);
       };
       recorder.start(1000);
-    }
+    };
+
+    // Wait a frame so <audio ref={audioRef}> is attached before createMediaElementSource
+    let cancelled = false;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!cancelled) startRecorder();
+      });
+    });
 
     const fullIntro = `${script.introduction} ${script.questions[0].text}`;
     introAudioUrlRef.current = null;
@@ -741,7 +838,12 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearInterval(interval);
+    };
   }, [phase, script, transcript.length, speakText, interviewId]);
 
   // ── Render: Entry ──────────────────────────────────────────────────────────
@@ -993,7 +1095,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   return (
     <div className="min-h-screen flex flex-col"
       style={{ background: "linear-gradient(135deg,#020b18 0%,#041428 55%,#061935 100%)" }}>
-      <audio ref={audioRef} className="hidden" />
+      <audio ref={audioRef} className="hidden" playsInline />
       <ParticleField />
 
       {/* ── Interview start countdown overlay ────────────────────────────── */}
@@ -1183,11 +1285,22 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
         </div>
 
         {/* Global state label */}
-        <div className="w-full flex items-center justify-center gap-2 mb-6 h-8">
+        <div
+          className={cn(
+            "w-full flex flex-col items-center justify-center gap-1 mb-6",
+            isRecording ? "min-h-[3.25rem]" : "h-8 flex-row gap-2"
+          )}
+        >
           {isThinking && <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />}
-          <span className={cn("text-sm font-semibold tracking-wide transition-all duration-300", stateColor)}>
+          <span className={cn("text-sm font-semibold tracking-wide transition-all duration-300 text-center", stateColor)}>
             {stateLabel}
           </span>
+          {isRecording && (
+            <p className="text-xs text-emerald-200/65 text-center max-w-xs leading-relaxed px-2">
+              When you&apos;re done speaking, tap the <span className="text-red-400/90 font-medium">red stop button</span>{" "}
+              below — that sends your answer to the interviewer.
+            </p>
+          )}
         </div>
 
         {/* Transcript */}
@@ -1229,13 +1342,17 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
         {/* Stop recording button */}
         {isRecording && (
-          <div className="mt-4 flex flex-col items-center gap-3">
-            <button onClick={stopRecording}
+          <div className="mt-2 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={stopRecording}
+              aria-label="Stop recording and send your answer"
               className="w-16 h-16 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              style={{ background: "rgba(239,68,68,0.2)", border: "2px solid rgba(239,68,68,0.6)", boxShadow: "0 0 30px rgba(239,68,68,0.3)" }}>
+              style={{ background: "rgba(239,68,68,0.2)", border: "2px solid rgba(239,68,68,0.6)", boxShadow: "0 0 30px rgba(239,68,68,0.3)" }}
+            >
               <Square className="w-6 h-6 fill-red-400 text-red-400" />
             </button>
-            <span className="text-xs text-red-400/70">Tap to finish your answer</span>
+            <span className="text-xs font-semibold text-red-400/85 tracking-wide">Stop — send answer</span>
           </div>
         )}
 
