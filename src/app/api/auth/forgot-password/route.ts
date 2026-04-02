@@ -6,6 +6,8 @@ import { sendPasswordResetOTP } from "@/lib/email";
 import { rateLimitAuthSensitive } from "@/lib/rate-limit";
 import { z } from "zod";
 
+export const maxDuration = 30;
+
 const schema = z.object({
   email: z.string().email(),
 });

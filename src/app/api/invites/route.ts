@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { sendInterviewInvite } from "@/lib/email";
 import { z } from "zod";
 
+/** Vercel: headroom for SMTP verify + send (plan may still cap duration, e.g. Hobby). */
+export const maxDuration = 30;
+
 const inviteSchema = z.object({
   jobId: z.string(),
   candidates: z.array(

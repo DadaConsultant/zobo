@@ -5,6 +5,8 @@ import { sendAdminNewUserNotification } from "@/lib/email";
 import { rateLimitAuthSensitive } from "@/lib/rate-limit";
 import { z } from "zod";
 
+export const maxDuration = 30;
+
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "support@zobojobs.com";
 
 const registerSchema = z.object({

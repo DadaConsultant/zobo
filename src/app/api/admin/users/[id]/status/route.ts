@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { sendAccountApprovedEmail } from "@/lib/email";
 import { z } from "zod";
 
+export const maxDuration = 30;
+
 const bodySchema = z.object({
   status: z.enum(["APPROVED", "SUSPENDED", "PENDING"]),
 });

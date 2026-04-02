@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInterviewInvite } from "@/lib/email";
 
+export const maxDuration = 30;
+
 const MAX_RESENDS = 1;
 
 export async function POST(

@@ -14,12 +14,23 @@ function requireSmtpEnv(): void {
 }
 
 const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const smtpSkipVerify =
+  process.env.SMTP_SKIP_VERIFY === "1" || process.env.SMTP_SKIP_VERIFY === "true";
+
+/** Vercel/serverless: avoid hanging the function; fail fast on bad networks */
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: smtpPort,
-  // port 465 uses implicit TLS; 587 uses STARTTLS
-  secure: false,
-  requireTLS: true,
+  // 465 = implicit TLS (SMTPS); 587 = STARTTLS (matches most hosts + Vercel)
+  secure: smtpPort === 465,
+  requireTLS: smtpPort !== 465,
+  connectionTimeout: 15_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
+  // Some providers reject generic EHLO hostnames from serverless; set SMTP_EHLO_NAME if needed
+  ...(process.env.SMTP_EHLO_NAME?.trim()
+    ? { name: process.env.SMTP_EHLO_NAME.trim() }
+    : {}),
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -31,6 +42,11 @@ let smtpVerified = false;
 async function ensureSmtpReady() {
   if (smtpVerified) return;
   requireSmtpEnv();
+  if (smtpSkipVerify) {
+    smtpVerified = true;
+    console.log("[email] SMTP_SKIP_VERIFY enabled — skipping transporter.verify()");
+    return;
+  }
   try {
     await transporter.verify();
     smtpVerified = true;
