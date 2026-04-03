@@ -38,7 +38,7 @@ ${job.customQuestions?.length ? `Custom Questions to Include:\n${job.customQuest
 
 Generate a JSON object with:
 1. An "introduction" string (2-3 sentences): Zobo introduces itself by name, warmly welcomes the candidate, briefly says this is a first-round AI screening, and ends with a natural lead-in to the first question such as "Here's my first question for you:" or "Let's dive straight in:" — do NOT include the question itself in the introduction
-2. A "questions" array of 6-8 interview questions. Each question should have:
+2. A "questions" array of 2-3 interview questions. Each question should have:
    - "id": unique string
    - "text": the question text
    - "type": one of "technical", "behavioral", "situational", "custom"
@@ -69,32 +69,61 @@ export interface TranscriptEntry {
   timestamp: number;
 }
 
+/** What kind of reply to generate after the candidate's latest answer */
+export type InterviewReplyPhase = "follow_up" | "advance" | "closing";
+
+export interface AIInterviewReply {
+  message: string;
+  /** When true, the client should end the session after speaking this message */
+  endSession: boolean;
+}
+
 export async function generateAIResponse(
   transcript: TranscriptEntry[],
   currentQuestion: InterviewQuestion,
   nextQuestion: InterviewQuestion | null,
-  jobContext: JobContext
-): Promise<string> {
+  jobContext: JobContext,
+  replyPhase: InterviewReplyPhase
+): Promise<AIInterviewReply> {
+  const phaseInstructions =
+    replyPhase === "follow_up"
+      ? `Reply phase: FOLLOW-UP (same question, not the end of the interview).
+You are still on this question: "${currentQuestion.text}"
+Follow-up guidance: ${currentQuestion.followUpPrompt || "If the answer was brief or vague, ask for one specific real-world example or clarification."}
+Acknowledge their answer briefly, then ask ONE concise follow-up. Do NOT wrap up the interview, do NOT say the recruiter will be in touch, do NOT imply this was their last chance to speak — more of the interview will follow after they answer again.`
+      : replyPhase === "advance"
+        ? nextQuestion
+          ? `Reply phase: MOVE TO NEXT TOPIC.
+After a brief acknowledgment, transition naturally into the next area — do NOT announce "next question" or "question two". Weave it in like a real phone screen. Next topic to lead into: "${nextQuestion.text}"`
+          : `Reply phase: MOVE ON (no further scripted topics in metadata — treat as closing).
+Give a warm, genuine closing: briefly reference something you appreciated, say the recruiter will review and be in touch, wish them well.`
+        : `Reply phase: CLOSING (this was their last answer on the final scripted question).
+Give a warm and genuine closing: briefly reference something specific you appreciated from the conversation, let them know the recruiter will review and be in touch, and wish them well. Make it feel like the natural end of a real phone call. Do NOT ask another interview question.`;
+
   const systemPrompt = `You are Zobo, a warm and experienced AI recruiter conducting a first-round telephone screening for a ${jobContext.title} role.
 
 Your voice and tone:
 - Sound like a real recruiter on a phone call — natural, human, and engaged
-- ALWAYS begin your response with a brief, genuine acknowledgment of what the candidate just said (one short sentence). Vary these naturally so they never feel repetitive. Examples: "That's a great example.", "Really interesting — thanks for sharing that.", "I appreciate that.", "That makes a lot of sense.", "Good to know.", "Helpful context, thank you.", "That's a solid answer."
-- Use natural connectors when transitioning: "Building on that...", "On a related note...", "That's actually a nice lead-in to my next question...", "I'd also love to understand..."
+- ALWAYS begin with a brief, genuine acknowledgment of what the candidate just said (one short sentence). Vary these: "That's a great example.", "Really interesting — thanks for sharing that.", "I appreciate that.", "That makes a lot of sense.", "Good to know.", "Helpful context, thank you.", "That's a solid answer."
+- Use natural connectors when appropriate: "Building on that...", "On a related note...", "I'd also love to understand..."
 - Speak in flowing sentences — never bullet points or lists
-- Reference something the candidate said earlier when it's relevant, to show you've been listening
+- Reference something the candidate said earlier when relevant
 
-Current question context: "${currentQuestion.text}"
-Follow-up guidance: ${currentQuestion.followUpPrompt || "If the answer was brief or vague, ask for a specific real-world example"}
+${phaseInstructions}
 
-${nextQuestion
-  ? `When you are ready to move on, transition naturally — do NOT announce "next question" or "moving on to question two". Weave it in as a real interviewer would. Next topic to lead into: "${nextQuestion.text}"`
-  : `This is the final question. Once the candidate has answered, give a warm and genuine closing: briefly reference something specific you appreciated from the conversation, let them know the recruiter will review and be in touch, and wish them well. Make it feel like the natural end of a real phone call.`}
+Early exit: If the candidate clearly asks to stop, end, or leave the interview (e.g. "I have to go", "please end this", "I'd like to stop now"), respond with a very brief warm closing and set endSession to true — do not ask another question.
 
-Rules:
-- Keep responses to 2–3 sentences maximum — concise but warm
+Output format — return ONLY valid JSON (no markdown):
+{"message":"<exactly what Zobo should say aloud, 2–3 short sentences unless closing>","endSession":<true|false>}
+
+Rules for endSession:
+- If reply phase is "closing", endSession MUST be true.
+- If the candidate clearly requested to end the interview early, endSession MUST be true.
+- Otherwise endSession MUST be false (including follow_up and advance phases when they did not ask to stop).
+
+Other rules:
 - Never share salary details, undisclosed company information, or make promises about the outcome
-- If asked about compensation: "The recruiter will walk you through the details at the next stage."
+- If asked about compensation: say the recruiter will walk through details at the next stage
 - Politely redirect if the candidate goes off-topic
 - Role: ${jobContext.title} | Required skills: ${jobContext.requiredSkills.join(", ")}`;
 
@@ -110,10 +139,27 @@ Rules:
     model: "gpt-4o-mini",
     messages,
     temperature: 0.7,
-    max_tokens: 250,
+    max_tokens: 350,
+    response_format: { type: "json_object" },
   });
 
-  return response.choices[0].message.content || "";
+  const raw = response.choices[0].message.content || "{}";
+  let parsed: { message?: string; endSession?: boolean };
+  try {
+    parsed = JSON.parse(raw) as { message?: string; endSession?: boolean };
+  } catch {
+    return { message: "Thank you for sharing that. Let's continue.", endSession: false };
+  }
+
+  const message =
+    typeof parsed.message === "string" && parsed.message.trim()
+      ? parsed.message.trim()
+      : "Thank you for sharing that. Let's continue.";
+
+  const endSession =
+    replyPhase === "closing" ? true : Boolean(parsed.endSession);
+
+  return { message, endSession };
 }
 
 export interface CandidateScores {
