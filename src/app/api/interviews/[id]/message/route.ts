@@ -26,6 +26,8 @@ const messageSchema = z.object({
       followUpPrompt: z.string().optional(),
     })
     .nullable(),
+  /** Drives prompt + when the scripted flow ends — must match client state machine */
+  replyPhase: z.enum(["follow_up", "advance", "closing"]),
 });
 
 export async function POST(
@@ -52,7 +54,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { transcript, currentQuestion, nextQuestion } = messageSchema.parse(body);
+    const { transcript, currentQuestion, nextQuestion, replyPhase } = messageSchema.parse(body);
 
     const job = interview.candidate.job;
     const jobContext = {
@@ -66,7 +68,8 @@ export async function POST(
       transcript as TranscriptEntry[],
       currentQuestion as InterviewQuestion,
       nextQuestion as InterviewQuestion | null,
-      jobContext
+      jobContext,
+      replyPhase
     );
 
     await prisma.interview.update({
@@ -74,7 +77,10 @@ export async function POST(
       data: { transcript: transcript as never },
     });
 
-    return NextResponse.json({ response: aiResponse });
+    return NextResponse.json({
+      response: aiResponse.message,
+      endSession: aiResponse.endSession,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });

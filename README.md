@@ -28,7 +28,7 @@ Zobo Jobs replaces first-round screening interviews with an AI video interview a
 - **AI Interview Script** — GPT-4o-mini auto-generates a tailored 6–8 question interview script on job creation
 - **Shareable Interview Link** — One unique link per job (`/interview/[token]`)
 - **AI Video Interview Engine** — Full video interview: ElevenLabs TTS asks questions, Whisper STT transcribes answers, GPT drives follow-ups
-- **Video Recording** — The entire interview session is recorded (camera + mic) and uploaded to Vercel Blob
+- **Video Recording** — The full session is recorded as one `webm` (camera video + **mixed audio**: microphone + AI TTS so employers hear both sides) and uploaded to Vercel Blob
 - **Camera Enforcement** — If the candidate turns off their camera mid-interview, the session is paused until video is restored
 - **Candidate Scoring** — Auto-scored on technical knowledge, communication, problem solving, experience fit, and confidence
 - **Video Playback** — Recruiters can watch the full interview recording on the candidate review page
@@ -185,26 +185,66 @@ Validates the `token` (unique interview link), creates or finds the `Candidate` 
 
 Before the interview begins, `interview-client.tsx` requests **camera + microphone** access via `getUserMedia({ video: true, audio: true })`. A live camera preview is shown so the candidate can verify their setup.
 
-A **continuous `MediaRecorder`** is started on the combined stream immediately when the interview phase begins. This records the entire session as a single `video/webm` file, collecting chunks every second.
+A **continuous `MediaRecorder`** starts when the interview phase begins. The stream passed to it is **not** the raw camera stream alone: a **Web Audio** graph mixes **microphone** + **AI TTS** (`<audio>` via `createMediaElementSource`) into a `MediaStreamDestination`, and that mixed audio is combined with the **camera video track** into one `MediaStream`. That way the saved `video/webm` includes what the candidate said **and** what Zobo said. (The microphone is **not** routed to `AudioContext.destination`, to avoid speaker echo.)
+
+**Per-answer STT** still uses **only the raw mic** tracks from the original `getUserMedia` stream — not the mixed stream — so Whisper gets clean candidate speech.
+
+Chunks are collected every second until `completeInterview()` stops the recorder.
 
 ---
 
-### 4. The Interview Loop
+### 4. Interview flow (candidate experience & state machine)
 
-Each cycle:
+This is the authoritative description of how a session runs. Use it when changing `interview-client.tsx`, `message/route.ts`, or `generateAIResponse()` in `openai.ts`.
 
-1. **AI speaks** — `speakText(text)` calls `POST /api/interviews/[id]/tts`, which calls ElevenLabs `textToSpeech.convert()` and streams back an audio blob. The client plays it via an `<audio>` element and resolves only when `audio.onended` fires.
+#### 4a. Before the first question
 
-2. **Candidate answers** — 600ms after audio ends, recording auto-starts using the audio tracks from the existing video stream (no second `getUserMedia` call needed). The candidate taps the red stop button when done.
+1. **Entry** — Candidate opens `/interview/[token]`, verifies email, submits **Start interview**.
+2. **`POST /api/interviews`** — Creates `Interview` (`IN_PROGRESS`), returns `interviewId` + `interviewScript` (shared script from the job).
+3. **Permission** — Browser prompts for camera + mic; stream is stored in a ref for preview, STT, and recording setup.
+4. **Interview UI** — Short **countdown**; intro + first question text are **pre-fetched** via TTS when possible.
+5. **First AI turn** — Transcript is seeded with the intro + first question; `speakText()` plays TTS, then (~600ms later) the mic opens for the candidate.
 
-3. **STT** — The audio blob is sent to `POST /api/interviews/[id]/stt`, which calls OpenAI Whisper and returns a transcript string.
+#### 4b. Scripted structure (per question)
 
-4. **AI response** — `POST /api/interviews/[id]/message` calls `generateAIResponse()` in `openai.ts`, passing the full transcript, the current question, and the next question (or `null` if it's the last). GPT decides whether to follow up or transition.
+The script has **N questions** (`questions[]`). For **each** question the client runs **two candidate turns** before moving on:
 
-5. **Advance or follow-up logic** (in `processAudio()`, `interview-client.tsx`):
-   - If `followUpCount < 1` and the candidate hasn't answered enough → same question, follow-up
-   - If `followUpCount >= 1` → advance to `questionIndex + 1`
-   - If `questionIndex >= totalQuestions - 1` and it's time to advance → closing message → `completeInterview()`
+| Turn | `followUpCount` (before processing) | Meaning |
+|------|-------------------------------------|---------|
+| 1st answer on this question | `0` | Main answer → AI should **follow up** on the same question (`replyPhase: "follow_up"`). |
+| 2nd answer on this question | `1` | Follow-up answer → AI either **advances** to the next question (`replyPhase: "advance"`) or **closes** if this was the last question (`replyPhase: "closing"`). |
+
+After the 2nd answer on a non-final question: `questionIndex++`, `followUpCount` resets to `0`.  
+After the 2nd answer on the **final** question: the session **must** end (see below).
+
+This is **fixed logic** on the client — the model does not choose how many turns per question; it only fills in what to **say** for the current phase.
+
+#### 4c. One full cycle (after AI has spoken)
+
+1. **Candidate answers** — Mic recording auto-starts after AI audio ends; candidate taps **Stop — send answer** when finished.
+2. **STT** — `POST /api/interviews/[id]/stt` (Whisper) → transcript text.
+3. **`POST /api/interviews/[id]/message`** — Body includes:
+   - `transcript` (including the new candidate line),
+   - `currentQuestion`,
+   - `nextQuestion` — sent **only** when `replyPhase === "advance"` (the **next** scripted question object, or `null` if none),
+   - **`replyPhase`** — `"follow_up"` | `"advance"` | `"closing"` (must match the client state machine).
+
+4. **`generateAIResponse()`** (`openai.ts`) — Uses `replyPhase` to pick **different system instructions**:
+   - **`follow_up`** — Stay on the same question; one concise follow-up; **do not** close the interview.
+   - **`advance`** — Acknowledge, then naturally transition into `nextQuestion.text` (no robotic “question two” labels).
+   - **`closing`** — Warm closing: thank them, recruiter will follow up, wish them well; **no** further interview questions.
+
+   The model returns **JSON only**: `{ "message": "<spoken reply>", "endSession": boolean }`.  
+   - For `replyPhase === "closing"`, **`endSession` is forced to `true`** in code.  
+   - For other phases, if the candidate **clearly asks to stop** (“I need to go”, “end the interview”, etc.), the model should set **`endSession: true`** and give a short closing; the client will then finish the session early.
+
+5. **Client** (`processAudio`) — Plays `message` via TTS. Then:
+   - If **`(shouldAdvance && isLastQuestion) || endSession`** → **`completeInterview()`** (upload video, save transcript, evaluate).
+   - Else apply follow-up vs advance: bump `followUpCount` or increment `questionIndex` / reset `followUpCount`, append AI line to transcript, continue.
+
+#### 4d. Why `replyPhase` exists
+
+Previously, `nextQuestion === null` was overloaded to mean “final closing” in the prompt, but the client sent `null` on **every** first answer to a question (follow-up round), so the model was often told it was on the **final** question when it was not. **`replyPhase` disambiguates** follow-up vs advance vs real closing.
 
 ---
 
@@ -279,23 +319,24 @@ Recruiter creates job
 generateInterviewScript() → saved to job.interviewScript (once, shared by all candidates)
         │
         ▼
-Candidate opens /interview/[token] → enters name/email → grants camera+mic
+Candidate opens /interview/[token] → verifies email → grants camera+mic
         │
         ▼
-POST /api/interviews → creates Interview record (IN_PROGRESS) → returns script
+POST /api/interviews → Interview (IN_PROGRESS) + script
         │
         ▼
-MediaRecorder starts (full session video/webm)
+Countdown → intro + Q1 (TTS) → MediaRecorder (camera + mixed mic+TTS audio)
         │
         ▼
-┌── AI speaks (ElevenLabs TTS) ──────────────────────────────────┐
-│   Candidate answers (Whisper STT)                               │
-│   POST /api/interviews/[id]/message (GPT follow-up or advance)  │
-│   Repeat until last question answered                           │
-└─────────────────────────────────────────────────────────────────┘
+┌── Loop per turn ─────────────────────────────────────────────────┐
+│  Candidate speaks → Stop → STT → POST .../message               │
+│  (replyPhase: follow_up → advance → … → closing)                 │
+│  JSON { message, endSession } — close if last Q + advance OR      │
+│  endSession (e.g. candidate asked to stop)                       │
+└──────────────────────────────────────────────────────────────────┘
         │
         ▼
-AI delivers closing message → completeInterview()
+completeInterview() after closing TTS
         │
         ├── upload() to Vercel Blob CDN → PUT videoUrl to DB
         └── POST /api/interviews/[id]/complete → evaluateInterview() → save scores

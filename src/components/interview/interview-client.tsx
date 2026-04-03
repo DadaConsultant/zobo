@@ -661,32 +661,49 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     setTranscript(updatedTranscript);
 
     if (!currentQuestion) return;
-    const nextQuestion  = script?.questions[questionIndex + 1] ?? null;
+    const nextQuestion = script?.questions[questionIndex + 1] ?? null;
     // Advance after exactly 1 follow-up per question.
-    // totalQuestions is driven by script.questions.length — whatever GPT generated.
     const shouldAdvance = followUpCount >= 1;
+    const isLastQuestion = questionIndex >= totalQuestions - 1;
+
+    /** Must stay in sync with generateAIResponse() in openai.ts */
+    const replyPhase: "follow_up" | "advance" | "closing" = !shouldAdvance
+      ? "follow_up"
+      : isLastQuestion
+        ? "closing"
+        : "advance";
 
     let aiText = "";
+    let endSession = false;
     try {
-      const res  = await fetch(`/api/interviews/${interviewId}/message`, {
+      const res = await fetch(`/api/interviews/${interviewId}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: updatedTranscript, currentQuestion, nextQuestion: shouldAdvance ? nextQuestion : null }),
+        body: JSON.stringify({
+          transcript: updatedTranscript,
+          currentQuestion,
+          nextQuestion: replyPhase === "advance" ? nextQuestion : null,
+          replyPhase,
+        }),
       });
       const data = await res.json();
       aiText = data.response || "";
+      endSession = Boolean(data.endSession);
     } catch {
       aiText = "Thank you for that answer. Let's continue.";
+      endSession = false;
     }
 
-    if (shouldAdvance && questionIndex >= totalQuestions - 1) {
-      const aiEntry: TranscriptEntry = { role: "ai", content: aiText, timestamp: Date.now() };
-      const finalTranscript = [...updatedTranscript, aiEntry];
-      setTranscript(finalTranscript);
+    const aiEntry: TranscriptEntry = { role: "ai", content: aiText, timestamp: Date.now() };
+    const transcriptWithAi = [...updatedTranscript, aiEntry];
+
+    const scriptedClose = shouldAdvance && isLastQuestion;
+    if (scriptedClose || endSession) {
+      setTranscript(transcriptWithAi);
       setIsThinking(false);
       isClosingRef.current = true;
       await speakText(aiText);
-      await completeInterview(finalTranscript);
+      await completeInterview(transcriptWithAi);
       return;
     }
 
@@ -697,8 +714,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       setFollowUpCount((c) => c + 1);
     }
 
-    const aiEntry: TranscriptEntry = { role: "ai", content: aiText, timestamp: Date.now() };
-    setTranscript((t) => [...t, aiEntry]);
+    setTranscript(transcriptWithAi);
     setIsThinking(false);
     await speakText(aiText);
   }
