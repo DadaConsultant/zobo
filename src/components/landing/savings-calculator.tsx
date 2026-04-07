@@ -257,7 +257,7 @@ export default function SavingsCalculator() {
             <MiniBarChart monthlySavings={monthlySavings} symbol={symbol} />
 
             {/* CTA */}
-            <Link href="/dashboard" style={{
+            <Link href="/book-demo" style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

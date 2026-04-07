@@ -50,6 +50,8 @@ const openaiRecruiter = sliding(redisClient, "openai-recruiter", 40, "1 h");
 const openaiInterview = sliding(redisClient, "openai-interview", 200, "1 h");
 /** ElevenLabs TTS */
 const elevenLabs = sliding(redisClient, "elevenlabs", 150, "1 h");
+/** Public demo request form (Make.com webhook) */
+const demoRequest = sliding(redisClient, "demo-request", 8, "1 h");
 
 export function getClientIp(req: Request | NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -109,4 +111,8 @@ export async function rateLimitOpenAiInterview(req: Request | NextRequest): Prom
 
 export async function rateLimitElevenLabs(req: Request | NextRequest): Promise<NextResponse | null> {
   return enforce(elevenLabs, `ip:${getClientIp(req)}`);
+}
+
+export async function rateLimitDemoRequest(req: Request | NextRequest): Promise<NextResponse | null> {
+  return enforce(demoRequest, `ip:${getClientIp(req)}`);
 }

@@ -154,7 +154,7 @@ export default function HomePage() {
               style={{ fontSize: 15, fontWeight: 500, color: "#6B7280", textDecoration: "none", padding: "8px 16px", transition: "color 150ms" }}>
               Sign In
             </Link>
-            <Link href="/signup" className="demo-btn"
+            <Link href="/book-demo" className="demo-btn"
               style={{ fontSize: 15, fontWeight: 600, color: "#FFFFFF", background: "#1F2937", borderRadius: 8, padding: "10px 22px", textDecoration: "none", transition: "background 150ms" }}>
               Get a Demo
             </Link>
@@ -184,7 +184,7 @@ export default function HomePage() {
 
           {/* CTAs */}
           <div style={{ display: "flex", gap: 14, justifyContent: "center", alignItems: "center", flexWrap: "wrap", marginBottom: 32 }}>
-            <Link href="/signup" className="demo-btn"
+            <Link href="/book-demo" className="demo-btn"
               style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#1F2937", color: "#FFFFFF", fontSize: 16, fontWeight: 600, padding: "15px 32px", borderRadius: 10, textDecoration: "none", transition: "background 150ms" }}>
               Get a Demo
               <ArrowRight size={16} />
@@ -702,9 +702,9 @@ export default function HomePage() {
           <p style={{ fontSize: 18, color: "rgba(255,255,255,0.6)", lineHeight: 1.65, marginBottom: 40 }}>
             Book a 10-minute demo and see how Zobo Jobs automates every first-round interview — so you only spend time on candidates worth meeting.
           </p>
-          <Link href="/signup" className="demo-btn"
+          <Link href="/book-demo" className="demo-btn"
             style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#4FD1C7", color: "#1F2937", fontSize: 17, fontWeight: 700, padding: "17px 40px", borderRadius: 10, textDecoration: "none", transition: "background 150ms" }}>
-            Get a Demo
+            Schedule a demo
             <ArrowRight size={18} />
           </Link>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>
