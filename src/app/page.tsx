@@ -6,6 +6,7 @@ import {
   Users, BarChart3, Award,
 } from "lucide-react";
 import SavingsCalculator from "@/components/landing/savings-calculator";
+import LandingHeader from "@/components/landing/landing-header";
 
 export const metadata: Metadata = {
   title: "AI Interview Automation Tool | Screen Candidates Automatically | Zobo Jobs",
@@ -41,20 +42,6 @@ export const metadata: Metadata = {
 };
 
 /* ─── Brand mark ──────────────────────────────────────── */
-function ZoboMark({ size = 36 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="8"  r="4" fill="#1A1A1A" />
-      <circle cx="8"  cy="28" r="4" fill="#1A1A1A" />
-      <circle cx="32" cy="28" r="4" fill="#1A1A1A" />
-      <circle cx="20" cy="20" r="3" fill="#4FD1C7" />
-      <line x1="20" y1="12" x2="20" y2="17" stroke="#1A1A1A" strokeWidth="1.5" />
-      <line x1="17" y1="22" x2="10" y2="26" stroke="#1A1A1A" strokeWidth="1.5" />
-      <line x1="23" y1="22" x2="30" y2="26" stroke="#1A1A1A" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 function ZoboMarkWhite({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
@@ -82,11 +69,22 @@ function Check({ children, dark = false }: { children: React.ReactNode; dark?: b
 /* ─── Section wrapper ─────────────────────────────────── */
 function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`px-6 md:px-12 lg:px-24 ${className}`}>
+    <section className={`px-4 sm:px-6 md:px-12 lg:px-24 ${className}`}>
       <div className="max-w-6xl mx-auto">{children}</div>
     </section>
   );
 }
+
+const COMPARISON_ROWS = [
+  { criteria: "Time per candidate", zobo: "0 minutes", trad: "20–45 minutes" },
+  { criteria: "Scheduling required", zobo: "Never", trad: "Always" },
+  { criteria: "Available 24/7", zobo: "✓ Yes", trad: "✗ No" },
+  { criteria: "Consistent scoring", zobo: "✓ Always", trad: "✗ Varies by interviewer" },
+  { criteria: "Recorded session", zobo: "✓ Full video", trad: "✗ Rarely" },
+  { criteria: "AI-generated summary", zobo: "✓ Every interview", trad: "✗ Manual notes only" },
+  { criteria: "Scales to 1,000+ candidates", zobo: "✓ Instantly", trad: "✗ Needs more headcount" },
+  { criteria: "Setup time", zobo: "3 minutes", trad: "Hours of coordination" },
+] as const;
 
 export default function HomePage() {
   return (
@@ -130,45 +128,15 @@ export default function HomePage() {
       `}</style>
 
       {/* ══════════════════ NAVBAR ══════════════════ */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(245,247,250,0.92)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E5E7EB" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Logo */}
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-            <ZoboMark size={32} />
-            <span style={{ fontSize: 20, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.4px" }}>Zobo Jobs</span>
-          </Link>
-
-          {/* Nav links */}
-          <nav style={{ display: "flex", gap: 36, alignItems: "center" }}>
-            {[["#how-it-works", "How it Works"], ["#features", "Features"], ["#costcalculator", "Cost Calculator"], ["#security", "Security"]].map(([href, label]) => (
-              <a key={href} href={href} className="nav-link"
-                style={{ fontSize: 15, fontWeight: 500, color: "#6B7280", textDecoration: "none", transition: "color 150ms" }}>
-                {label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Auth */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <Link href="/login" className="signin-btn"
-              style={{ fontSize: 15, fontWeight: 500, color: "#6B7280", textDecoration: "none", padding: "8px 16px", transition: "color 150ms" }}>
-              Sign In
-            </Link>
-            <Link href="/book-demo" className="demo-btn"
-              style={{ fontSize: 15, fontWeight: 600, color: "#FFFFFF", background: "#1F2937", borderRadius: 8, padding: "10px 22px", textDecoration: "none", transition: "background 150ms" }}>
-              Get a Demo
-            </Link>
-          </div>
-        </div>
-      </header>
+      <LandingHeader />
 
       {/* ══════════════════ HERO ══════════════════ */}
-      <section style={{ padding: "96px 24px 80px", textAlign: "center", background: "#F5F7FA" }}>
-        <div style={{ maxWidth: 820, margin: "0 auto" }}>
+      <section className="bg-[#F5F7FA] px-4 pb-14 pt-12 text-center sm:px-6 sm:pb-16 sm:pt-16 md:pb-20 md:pt-24">
+        <div className="mx-auto max-w-[820px]">
           {/* H1 — primary SEO heading, styled as eyebrow badge */}
-          <h1 style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 50, padding: "6px 18px", marginBottom: 32, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.3px" }}>
+          <h1 className="mx-auto mb-8 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-4 py-2 text-left text-xs font-bold text-[#374151] shadow-sm sm:mb-8 sm:gap-2.5 sm:px-[18px] sm:text-[13px]" style={{ letterSpacing: "0.3px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4FD1C7", display: "inline-block", flexShrink: 0 }} />
-            AI Interview Automation — Screen Candidates Automatically
+            <span className="text-center leading-snug">AI Interview Automation — Screen Candidates Automatically</span>
           </h1>
 
           {/* H2 — visual hero headline */}
@@ -178,19 +146,17 @@ export default function HomePage() {
           </h2>
 
           {/* Sub */}
-          <p style={{ fontSize: 19, color: "#6B7280", lineHeight: 1.65, maxWidth: 640, margin: "0 auto 44px" }}>
+          <p className="mx-auto mb-10 max-w-[640px] text-base text-[#6B7280] sm:text-lg md:text-[19px]" style={{ lineHeight: 1.65 }}>
             Automatically screen every applicant with AI-powered video interviews — and get a ranked shortlist, full recordings, summaries, and scores without doing a single call.
           </p>
 
           {/* CTAs */}
-          <div style={{ display: "flex", gap: 14, justifyContent: "center", alignItems: "center", flexWrap: "wrap", marginBottom: 32 }}>
-            <Link href="/book-demo" className="demo-btn"
-              style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#1F2937", color: "#FFFFFF", fontSize: 16, fontWeight: 600, padding: "15px 32px", borderRadius: 10, textDecoration: "none", transition: "background 150ms" }}>
+          <div className="mb-8 flex flex-col items-stretch justify-center gap-3 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5">
+            <Link href="/book-demo" className="demo-btn inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#1F2937] px-7 py-3.5 text-base font-semibold text-white no-underline transition-colors sm:inline-flex sm:shrink-0">
               Get a Demo
               <ArrowRight size={16} />
             </Link>
-            <a href="#demo" className="ghost-btn"
-              style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#FFFFFF", color: "#374151", fontSize: 16, fontWeight: 500, padding: "15px 28px", borderRadius: 10, textDecoration: "none", border: "1px solid #E5E7EB", transition: "background 150ms" }}>
+            <a href="#demo" className="ghost-btn inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-6 py-3.5 text-base font-medium text-[#374151] no-underline transition-colors sm:inline-flex sm:shrink-0">
               <Play size={15} fill="#374151" />
               Watch Sample Interview
             </a>
@@ -204,12 +170,12 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ SOCIAL PROOF ══════════════════ */}
-      <section style={{ background: "#FFFFFF", borderTop: "1px solid #E5E7EB", borderBottom: "1px solid #E5E7EB", padding: "36px 24px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+      <section className="border-y border-[#E5E7EB] bg-white px-4 py-8 sm:px-6 sm:py-9">
+        <div className="mx-auto max-w-[900px] text-center">
           <p style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 28 }}>
             Trusted by fast-growing teams
           </p>
-          <div style={{ display: "flex", gap: 48, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 sm:gap-x-12">
             {["TechStart", "HireScale", "Foundry", "TalentOps", "SprintHQ"].map((name) => (
               <div key={name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {/* <div style={{ width: 28, height: 28, background: "#F5F7FA", borderRadius: 6, border: "1px solid #E5E7EB" }} /> */}
@@ -221,8 +187,8 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ VALUE PROPOSITION ══════════════════ */}
-      <Section className="py-24">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+      <Section className="py-16 md:py-24">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <div>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Why Zobo Jobs</p>
             <h2 style={{ fontSize: "clamp(30px, 3.5vw, 44px)", fontWeight: 700, color: "#1A1A1A", lineHeight: 1.15, letterSpacing: "-1px", marginBottom: 20 }}>
@@ -253,7 +219,7 @@ export default function HomePage() {
               </div>
               {/* Content */}
               <div style={{ padding: 24 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
                   {/* AI box */}
                   <div style={{ background: "#1F2937", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
                     <div style={{ width: 40, height: 40, background: "#4FD1C7", borderRadius: "50%", margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -301,8 +267,8 @@ export default function HomePage() {
       </Section>
 
       {/* ══════════════════ HOW IT WORKS ══════════════════ */}
-      <section id="how-it-works" style={{ background: "#FFFFFF", padding: "96px 24px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <section id="how-it-works" className="bg-white px-4 py-16 sm:px-6 md:py-24">
+        <div className="mx-auto max-w-[1100px]">
           <div style={{ textAlign: "center", marginBottom: 64 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Process</p>
             <h2 style={{ fontSize: "clamp(28px, 3.5vw, 44px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-1px" }}>
@@ -310,19 +276,19 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, position: "relative" }}>
+          <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { step: "01", title: "Create a Job", desc: "Describe your role once. The AI builds your interview for you — questions, scoring rubric, and introduction." },
               { step: "02", title: "Approve Questions", desc: "Review or edit your interview script in seconds before it goes live. No surprises." },
               { step: "03", title: "Share the Link", desc: "Send one link to candidates via email, WhatsApp, or LinkedIn. No scheduling. No calendar coordination." },
               { step: "04", title: "Get Your Shortlist", desc: "Zobo interviews candidates automatically and returns a ranked shortlist with scores, recordings, and AI summaries." },
             ].map((item, i) => (
-              <div key={item.step} className="card-hover" style={{ background: "#F5F7FA", borderRadius: 16, padding: "32px 28px", transition: "transform 150ms, box-shadow 150ms", position: "relative" }}>
+              <div key={item.step} className="card-hover relative" style={{ background: "#F5F7FA", borderRadius: 16, padding: "32px 28px", transition: "transform 150ms, box-shadow 150ms" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "0.5px", marginBottom: 16 }}>STEP {item.step}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", marginBottom: 12 }}>{item.title}</h3>
                 <p style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.7 }}>{item.desc}</p>
                 {i < 3 && (
-                  <ChevronRight size={50} color="#D1D5DB" style={{ position: "absolute", right: -38, top: "50%", transform: "translateY(-50%)", zIndex: 1 }} />
+                  <ChevronRight size={50} color="#D1D5DB" className="pointer-events-none absolute -right-4 top-1/2 z-[1] hidden -translate-y-1/2 xl:block" aria-hidden />
                 )}
               </div>
             ))}
@@ -331,11 +297,11 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ DEMO VISUAL ══════════════════ */}
-      <section id="demo" style={{ background: "#1F2937", padding: "96px 24px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+      <section id="demo" className="bg-[#1F2937] px-4 py-16 sm:px-6 md:py-24">
+        <div className="mx-auto max-w-[900px] text-center">
           <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>See It In Action</p>
-            <h2 style={{ fontSize: "clamp(28px, 3.5vw, 44px)", fontWeight: 700, color: "#FFFFFF", letterSpacing: "-1px", marginBottom: 16 }}>
-            Automate Every First-Round Interview.<br />Review only what matters.
+            <h2 className="mb-4 text-[clamp(1.5rem,5vw,2.75rem)] font-bold leading-tight tracking-tight text-white">
+            Automate Every First-Round Interview.<br className="hidden sm:block" /><span className="sm:hidden"> </span>Review only what matters.
           </h2>
           <p style={{ fontSize: 17, color: "rgba(255,255,255,0.6)", lineHeight: 1.65, maxWidth: 560, margin: "0 auto 48px" }}>
             The AI follows up, stays on script, and evaluates every answer — so you only spend time on the people who actually matter.
@@ -344,18 +310,18 @@ export default function HomePage() {
           {/* Mock UI */}
           <div style={{ background: "#FFFFFF", borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             {/* Browser chrome */}
-            <div style={{ background: "#F5F7FA", borderBottom: "1px solid #E5E7EB", padding: "12px 20px", display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E7EB] bg-[#F5F7FA] px-3 py-3 sm:flex-nowrap sm:gap-2 sm:px-5">
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444" }} />
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B" }} />
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10B981" }} />
-              <div style={{ flex: 1, background: "#FFFFFF", borderRadius: 6, padding: "5px 14px", marginLeft: 12, fontSize: 12, color: "#9CA3AF", textAlign: "left", border: "1px solid #E5E7EB" }}>
-                app.zobojobs.com/interview/senior-engineer-2026
+              <div className="min-w-0 flex-1 rounded-md border border-[#E5E7EB] bg-white py-1.5 pl-3 pr-2 text-left text-[11px] text-[#9CA3AF] sm:ml-3 sm:text-xs">
+                <span className="block truncate">app.zobojobs.com/interview/senior-engineer-2026</span>
               </div>
             </div>
 
             {/* Interview UI */}
-            <div style={{ background: "#0F172A", padding: 32 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            <div className="bg-[#0F172A] p-4 sm:p-8">
+              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* AI panel */}
                 <div style={{ background: "#1E293B", borderRadius: 14, padding: 24, textAlign: "center", border: "2px solid #4FD1C7" }}>
                   <div style={{ width: 56, height: 56, background: "linear-gradient(135deg, #1F2937, #374151)", borderRadius: "50%", margin: "0 auto 12px", border: "3px solid #4FD1C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -396,7 +362,7 @@ export default function HomePage() {
               </div>
 
               {/* Progress + score row */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+              <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto]">
                 <div style={{ background: "#1E293B", borderRadius: 10, padding: "10px 14px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>
                     <span>Interview progress</span><span>Q3 of 5</span>
@@ -420,8 +386,8 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ FEATURES ══════════════════ */}
-      <section id="features" style={{ padding: "96px 24px", background: "#F5F7FA" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <section id="features" className="bg-[#F5F7FA] px-4 py-16 sm:px-6 md:py-24">
+        <div className="mx-auto max-w-[1100px]">
           <div style={{ textAlign: "center", marginBottom: 64 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Features</p>
             <h2 style={{ fontSize: "clamp(28px, 3.5vw, 44px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-1px" }}>
@@ -429,7 +395,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[
               {
                 icon: <Video size={22} color="#1F2937" />,
@@ -489,20 +455,20 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ STATS ══════════════════ */}
-      <section style={{ background: "#1F2937", padding: "80px 24px" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <section className="bg-[#1F2937] px-4 py-14 sm:px-6 md:py-20">
+        <div className="mx-auto max-w-[1000px]">
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <h2 style={{ fontSize: "clamp(26px, 3vw, 38px)", fontWeight: 700, color: "#FFFFFF", letterSpacing: "-0.8px" }}>
               Why Teams Choose Zobo Jobs
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
+          <div className="grid grid-cols-1 divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
             {[
               { value: "10x", label: "Faster screening", detail: "Replace hours of manual interviews with automated AI-led conversations." },
               { value: "85%", label: "Time saved per hire", detail: "Recruiters get time back to focus on closing top candidates." },
               { value: "3 min", label: "To set up", detail: "Create your interview in under three minutes — no training needed." },
-            ].map((s, i) => (
-              <div key={s.label} style={{ padding: "40px 36px", textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+            ].map((s) => (
+              <div key={s.label} className="px-6 py-10 text-center md:px-9 md:py-11">
                 <div style={{ fontSize: 56, fontWeight: 800, color: "#4FD1C7", lineHeight: 1, marginBottom: 8, letterSpacing: "-2px" }}>{s.value}</div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 12 }}>{s.label}</div>
                 <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, maxWidth: 220, margin: "0 auto" }}>{s.detail}</div>
@@ -516,8 +482,8 @@ export default function HomePage() {
       <SavingsCalculator />
 
       {/* ══════════════════ SEO: WHAT IS AN AI INTERVIEW TOOL ══════════════════ */}
-      <section style={{ background: "#F5F7FA", padding: "80px 24px", borderTop: "1px solid #E5E7EB" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+      <section className="border-t border-[#E5E7EB] bg-[#F5F7FA] px-4 py-14 sm:px-6 md:py-20">
+        <div className="mx-auto max-w-[860px]">
           <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Explainer</p>
           <h2 style={{ fontSize: "clamp(26px, 3vw, 38px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.8px", marginBottom: 20 }}>
             What Is an AI Interview Tool?
@@ -532,15 +498,15 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ SEO: BENEFITS ══════════════════ */}
-      <section style={{ background: "#FFFFFF", padding: "80px 24px", borderTop: "1px solid #E5E7EB" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <section className="border-t border-[#E5E7EB] bg-white px-4 py-14 sm:px-6 md:py-20">
+        <div className="mx-auto max-w-[1100px]">
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Why It Works</p>
             <h2 style={{ fontSize: "clamp(26px, 3vw, 38px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.8px" }}>
               Benefits of Automated Screening Interviews
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[
               { num: "01", title: "Eliminate scheduling friction", desc: "Candidates complete interviews on their own time — no back-and-forth, no calendar coordination, no no-shows." },
               { num: "02", title: "Standardise every assessment", desc: "Every candidate answers the same questions in the same format, removing inconsistency and unconscious bias from early-stage screening." },
@@ -559,36 +525,67 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════ SEO: COMPARISON TABLE ══════════════════ */}
-      <section style={{ background: "#F5F7FA", padding: "80px 24px", borderTop: "1px solid #E5E7EB" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>Comparison</p>
-            <h2 style={{ fontSize: "clamp(26px, 3vw, 38px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.8px" }}>
+      {/* ══════════════════ SEO: COMPARISON (cards on mobile, grid on md+) ══════════════════ */}
+      <section className="border-t border-[#E5E7EB] bg-[#F5F7FA] px-4 py-14 sm:px-6 md:py-20">
+        <div className="mx-auto max-w-[860px]">
+          <div className="mb-8 text-center sm:mb-10 md:mb-12">
+            <p className="mb-3 text-[13px] font-bold uppercase tracking-widest text-[#4FD1C7] sm:mb-4">
+              Comparison
+            </p>
+            <h2 className="text-balance text-[clamp(1.35rem,3.5vw,2.375rem)] font-bold tracking-tight text-[#1A1A1A]">
               AI Interviews vs Traditional Screening Calls
             </h2>
           </div>
-          <div style={{ background: "#FFFFFF", borderRadius: 20, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-            {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", background: "#1F2937" }}>
-              <div style={{ padding: "16px 24px", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Criteria</div>
-              <div style={{ padding: "16px 24px", fontSize: 13, fontWeight: 700, color: "#4FD1C7", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center" }}>Zobo Jobs AI</div>
-              <div style={{ padding: "16px 24px", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center" }}>Traditional Calls</div>
+
+          {/* Mobile: stacked criterion cards (no horizontal table scroll) */}
+          <div className="flex flex-col gap-3 md:hidden" role="list">
+            {COMPARISON_ROWS.map((row) => (
+              <div
+                key={row.criteria}
+                role="listitem"
+                className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+              >
+                <p className="mb-3 text-[15px] font-semibold leading-snug text-[#1A1A1A]">{row.criteria}</p>
+                <dl className="space-y-2">
+                  <div className="flex items-start justify-between gap-3 rounded-xl bg-[#F0FDFA] px-3 py-2.5">
+                    <dt className="text-[11px] font-bold uppercase tracking-wide text-[#0D9488]">Zobo Jobs AI</dt>
+                    <dd className="text-right text-sm font-semibold text-[#0F766E]">{row.zobo}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3 rounded-xl bg-[#F9FAFB] px-3 py-2.5">
+                    <dt className="text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">Traditional</dt>
+                    <dd className="text-right text-sm font-medium text-[#9CA3AF]">{row.trad}</dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+
+          {/* md+: same 3-column layout as before, semantic div grid (not <table>) */}
+          <div
+            className="hidden overflow-hidden rounded-[20px] border border-[#E5E7EB] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.06)] md:block"
+            role="region"
+            aria-label="Comparison of AI interviews and traditional screening"
+          >
+            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] bg-[#1F2937]">
+              <div className="px-5 py-4 text-[13px] font-bold uppercase tracking-wide text-white/50 lg:px-6">
+                Criteria
+              </div>
+              <div className="px-4 py-4 text-center text-[13px] font-bold uppercase tracking-wide text-[#4FD1C7] lg:px-6">
+                Zobo Jobs AI
+              </div>
+              <div className="px-4 py-4 text-center text-[13px] font-bold uppercase tracking-wide text-white/50 lg:px-6">
+                Traditional Calls
+              </div>
             </div>
-            {[
-              { criteria: "Time per candidate", zobo: "0 minutes", trad: "20–45 minutes" },
-              { criteria: "Scheduling required", zobo: "Never", trad: "Always" },
-              { criteria: "Available 24/7", zobo: "✓ Yes", trad: "✗ No" },
-              { criteria: "Consistent scoring", zobo: "✓ Always", trad: "✗ Varies by interviewer" },
-              { criteria: "Recorded session", zobo: "✓ Full video", trad: "✗ Rarely" },
-              { criteria: "AI-generated summary", zobo: "✓ Every interview", trad: "✗ Manual notes only" },
-              { criteria: "Scales to 1,000+ candidates", zobo: "✓ Instantly", trad: "✗ Needs more headcount" },
-              { criteria: "Setup time", zobo: "3 minutes", trad: "Hours of coordination" },
-            ].map((row, i) => (
-              <div key={row.criteria} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", borderTop: "1px solid #F5F7FA", background: i % 2 === 0 ? "#FFFFFF" : "#FAFAFA" }}>
-                <div style={{ padding: "14px 24px", fontSize: 14, color: "#374151", fontWeight: 500 }}>{row.criteria}</div>
-                <div style={{ padding: "14px 24px", fontSize: 14, color: "#0D9488", fontWeight: 600, textAlign: "center" }}>{row.zobo}</div>
-                <div style={{ padding: "14px 24px", fontSize: 14, color: "#9CA3AF", textAlign: "center" }}>{row.trad}</div>
+            {COMPARISON_ROWS.map((row, i) => (
+              <div
+                key={row.criteria}
+                className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] border-t border-[#F5F7FA]"
+                style={{ background: i % 2 === 0 ? "#FFFFFF" : "#FAFAFA" }}
+              >
+                <div className="px-5 py-3.5 text-sm font-medium text-[#374151] lg:px-6 lg:py-3.5">{row.criteria}</div>
+                <div className="px-4 py-3.5 text-center text-sm font-semibold text-[#0D9488] lg:px-6">{row.zobo}</div>
+                <div className="px-4 py-3.5 text-center text-sm text-[#9CA3AF] lg:px-6">{row.trad}</div>
               </div>
             ))}
           </div>
@@ -596,9 +593,9 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ SECURITY ══════════════════ */}
-      <section id="security" style={{ background: "#F5F7FA", padding: "96px 24px", borderTop: "1px solid #E5E7EB" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+      <section id="security" className="border-t border-[#E5E7EB] bg-[#F5F7FA] px-4 py-16 sm:px-6 md:py-24">
+        <div className="mx-auto max-w-[900px]">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <div>
               <div style={{ width: 52, height: 52, background: "#1F2937", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
                 <Lock size={24} color="#4FD1C7" />
@@ -688,8 +685,8 @@ export default function HomePage() {
       </section> */}
 
       {/* ══════════════════ FINAL CTA ══════════════════ */}
-      <section style={{ background: "#1F2937", padding: "96px 24px", textAlign: "center" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <section className="bg-[#1F2937] px-4 py-16 text-center sm:px-6 md:py-24">
+        <div className="mx-auto max-w-[640px]">
           <div style={{ width: 52, height: 52, margin: "0 auto 32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ZoboMarkWhite size={52} />
           </div>
@@ -702,8 +699,7 @@ export default function HomePage() {
           <p style={{ fontSize: 18, color: "rgba(255,255,255,0.6)", lineHeight: 1.65, marginBottom: 40 }}>
             Book a 10-minute demo and see how Zobo Jobs automates every first-round interview — so you only spend time on candidates worth meeting.
           </p>
-          <Link href="/book-demo" className="demo-btn"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#4FD1C7", color: "#1F2937", fontSize: 17, fontWeight: 700, padding: "17px 40px", borderRadius: 10, textDecoration: "none", transition: "background 150ms" }}>
+          <Link href="/book-demo" className="demo-btn inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#4FD1C7] px-8 py-4 text-base font-bold text-[#1F2937] no-underline transition-colors sm:text-[17px]">
             Schedule a demo
             <ArrowRight size={18} />
           </Link>
@@ -714,13 +710,13 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════ FOOTER ══════════════════ */}
-      <footer style={{ background: "#111827", padding: "48px 24px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <footer className="bg-[#111827] px-4 py-10 sm:px-6 sm:py-12">
+        <div className="mx-auto flex max-w-[1100px] flex-col items-center gap-6 text-center md:flex-row md:flex-wrap md:items-center md:justify-between md:text-left">
+          <div className="flex items-center gap-2.5">
             <ZoboMarkWhite size={28} />
             <span style={{ color: "#FFFFFF", fontWeight: 700, fontSize: 18, letterSpacing: "-0.3px" }}>Zobo Jobs</span>
           </div>
-          <div style={{ display: "flex", gap: 32 }}>
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:justify-end" aria-label="Footer">
             {[
               { label: "Cost Calculator",     href: "#costcalculator" },
               { label: "Security", href: "#security" },
@@ -733,8 +729,8 @@ export default function HomePage() {
                 {label}
               </a>
             ))}
-          </div>
-          <p style={{ fontSize: 11, lineHeight: 1.2, color: "#4B5563" }}>© 2026 Zobo Jobs — AI Interview Infrastructure. Powered by Safeburse Limited. <a href="https://zobojobs.com" style={{ color: "#4FD1C7", textDecoration: "none" }}>Zobo</a>.</p>
+          </nav>
+          <p className="max-w-md text-balance text-[13px] leading-snug text-[#4B5563] md:max-w-none md:basis-full lg:basis-auto lg:text-right">© 2026 Zobo Jobs — AI Interview Infrastructure.<a href="https://safeburse.com" style={{ color: "#4FD1C7", textDecoration: "none" }}> Powered by Safeburse Limited</a> . <a href="https://zobojobs.com" style={{ color: "#4FD1C7", textDecoration: "none" }}>Zobo</a>.</p>
         </div>
       </footer>
     </div>

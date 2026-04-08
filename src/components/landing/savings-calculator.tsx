@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const CURRENCIES = [
   { code: "GBP", symbol: "£", rate: 1 },
   { code: "USD", symbol: "$", rate: 1.27 },
   { code: "EUR", symbol: "€", rate: 1.17 },
-];
+] as const;
 
 function useAnimatedNumber(target: number, duration = 600) {
   const [display, setDisplay] = useState(target);
@@ -34,7 +35,9 @@ function useAnimatedNumber(target: number, duration = 600) {
       }
     };
     rafRef.current = requestAnimationFrame(step);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [target, duration]);
 
   return display;
@@ -55,44 +58,57 @@ function SliderInput({ label, value, min, max, step, suffix, prefix, onChange }:
   const pct = ((value - min) / (max - min)) * 100;
 
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <label style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>{label}</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#F5F7FA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "4px 10px" }}>
-          {prefix && <span style={{ fontSize: 14, fontWeight: 700, color: "#1F2937" }}>{prefix}</span>}
+    <div className="mb-6 sm:mb-7">
+      <div className="mb-2 flex flex-col gap-2 sm:mb-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <label className="text-sm font-semibold leading-snug text-[#374151] sm:text-[14px]">{label}</label>
+        <div className="flex w-full max-w-[11rem] items-center gap-1 self-start rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 sm:w-auto sm:max-w-none sm:shrink-0 sm:self-auto sm:bg-[#F5F7FA]">
+          {prefix && <span className="text-sm font-bold text-[#1F2937]">{prefix}</span>}
           <input
             type="number"
             value={value}
             min={min}
             max={max}
             step={step}
+            inputMode="decimal"
             onChange={(e) => {
               const v = Number(e.target.value);
               if (!isNaN(v) && v >= min && v <= max) onChange(v);
             }}
-            style={{ width: 64, background: "transparent", border: "none", outline: "none", fontSize: 14, fontWeight: 700, color: "#1F2937", textAlign: "right" }}
+            className="min-w-0 flex-1 border-0 bg-transparent text-right text-sm font-bold text-[#1F2937] outline-none sm:w-16"
           />
-          {suffix && <span style={{ fontSize: 14, color: "#6B7280" }}>{suffix}</span>}
+          {suffix && <span className="text-sm text-[#6B7280]">{suffix}</span>}
         </div>
       </div>
-      <div style={{ position: "relative", height: 6, borderRadius: 999, background: "#E5E7EB", cursor: "pointer" }}>
-        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 999, background: "linear-gradient(90deg, #0D9488, #4FD1C7)", width: `${pct}%`, transition: "width 80ms" }} />
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            opacity: 0, cursor: "pointer", margin: 0,
-          }}
-        />
+      {/* Tall touch target: padding expands hit area; track stays visible in the middle */}
+      <div className="relative flex items-center py-2.5 sm:py-1">
+        <div className="relative h-3 w-full rounded-full bg-[#E5E7EB]">
+          <div
+            className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#0D9488] to-[#4FD1C7] transition-[width] duration-75"
+            style={{ width: `${pct}%` }}
+          />
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            aria-label={label}
+            onChange={(e) => onChange(Number(e.target.value))}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: "#9CA3AF" }}>{prefix}{min}{suffix}</span>
-        <span style={{ fontSize: 11, color: "#9CA3AF" }}>{prefix}{max}{suffix}</span>
+      <div className="mt-1 flex justify-between text-[11px] text-[#9CA3AF]">
+        <span>
+          {prefix}
+          {min}
+          {suffix}
+        </span>
+        <span>
+          {prefix}
+          {max}
+          {suffix}
+        </span>
       </div>
     </div>
   );
@@ -103,25 +119,35 @@ interface MetricCardProps {
   value: number;
   symbol: string;
   highlight?: boolean;
-  large?: boolean;
 }
 
-function MetricCard({ label, value, symbol, highlight, large }: MetricCardProps) {
+function MetricCard({ label, value, symbol, highlight }: MetricCardProps) {
   const animated = useAnimatedNumber(value);
   return (
-    <div style={{
-      background: highlight ? "linear-gradient(135deg, #0D9488 0%, #059669 100%)" : "#FFFFFF",
-      borderRadius: 14,
-      padding: large ? "28px 24px" : "20px 20px",
-      border: highlight ? "none" : "1px solid #E5E7EB",
-      boxShadow: highlight ? "0 8px 32px rgba(13,148,136,0.25)" : "0 2px 8px rgba(0,0,0,0.04)",
-      gridColumn: large ? "span 2" : undefined,
-    }}>
-      <p style={{ fontSize: 13, fontWeight: 600, color: highlight ? "rgba(255,255,255,0.75)" : "#6B7280", marginBottom: 8, letterSpacing: "0.3px" }}>
+    <div
+      className={cn(
+        "rounded-xl border p-4 sm:p-5",
+        highlight
+          ? "border-transparent bg-gradient-to-br from-[#0D9488] to-[#059669] shadow-[0_8px_32px_rgba(13,148,136,0.25)]"
+          : "border-[#E5E7EB] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+      )}
+    >
+      <p
+        className={cn(
+          "mb-1.5 text-xs font-semibold tracking-wide sm:mb-2 sm:text-[13px]",
+          highlight ? "text-white/75" : "text-[#6B7280]"
+        )}
+      >
         {label}
       </p>
-      <p style={{ fontSize: large ? 36 : 26, fontWeight: 800, color: highlight ? "#FFFFFF" : "#1A1A1A", letterSpacing: "-1px", lineHeight: 1 }}>
-        {symbol}{animated.toLocaleString()}
+      <p
+        className={cn(
+          "text-xl font-extrabold leading-none tracking-tight sm:text-[26px]",
+          highlight ? "text-white" : "text-[#1A1A1A]"
+        )}
+      >
+        {symbol}
+        {animated.toLocaleString()}
       </p>
     </div>
   );
@@ -146,45 +172,37 @@ export default function SavingsCalculator() {
   const hoursSavedPerRole = Math.round(candidates * timePerCallHours * 0.85 * 10) / 10;
 
   return (
-    <section id="costcalculator" style={{ background: "#FFFFFF", padding: "96px 24px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 16 }}>
+    <section id="costcalculator" className="bg-white px-4 py-12 sm:px-6 md:py-20 lg:py-24">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="mb-10 text-center sm:mb-12 md:mb-14">
+          <p className="mb-3 text-[13px] font-bold uppercase tracking-widest text-[#4FD1C7] sm:mb-4">
             ROI Calculator
           </p>
-          <h2 style={{ fontSize: "clamp(28px, 3.5vw, 44px)", fontWeight: 700, color: "#1A1A1A", letterSpacing: "-1px", marginBottom: 16 }}>
-            See How Much You Can Save with<br />AI Interview Automation
+          <h2 className="mb-3 text-balance text-[clamp(1.35rem,4vw,2.75rem)] font-bold tracking-tight text-[#1A1A1A] sm:mb-4">
+            See How Much You Can Save with{" "}
+            <span className="block sm:inline">AI Interview Automation</span>
           </h2>
-          <p style={{ fontSize: 17, color: "#6B7280", maxWidth: 560, margin: "0 auto" }}>
+          <p className="mx-auto max-w-xl text-base text-[#6B7280] sm:text-[17px]">
             Zobo automates first-round interviews with AI — replace screening calls with a single link.
           </p>
         </div>
 
-        {/* Calculator card */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, background: "#F5F7FA", borderRadius: 24, border: "1px solid #E5E7EB", padding: 40, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" }}>
-
-          {/* Left: Inputs */}
-          <div>
-            {/* Currency switcher */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
+        <div className="grid grid-cols-1 gap-8 rounded-3xl border border-[#E5E7EB] bg-[#F5F7FA] p-4 shadow-[0_4px_32px_rgba(0,0,0,0.06)] sm:p-6 lg:grid-cols-2 lg:gap-10 lg:p-10">
+          {/* Inputs */}
+          <div className="min-w-0">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#9CA3AF]">Currency</p>
+            <div className="mb-6 grid grid-cols-3 gap-2 sm:mb-8 sm:flex sm:flex-wrap sm:gap-2">
               {CURRENCIES.map((c, i) => (
                 <button
                   key={c.code}
+                  type="button"
                   onClick={() => setCurrencyIdx(i)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 8,
-                    border: "1px solid",
-                    borderColor: i === currencyIdx ? "#0D9488" : "#E5E7EB",
-                    background: i === currencyIdx ? "#0D9488" : "#FFFFFF",
-                    color: i === currencyIdx ? "#FFFFFF" : "#6B7280",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 150ms",
-                  }}
+                  className={cn(
+                    "rounded-lg border px-2 py-2.5 text-xs font-semibold transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13px]",
+                    i === currencyIdx
+                      ? "border-[#0D9488] bg-[#0D9488] text-white"
+                      : "border-[#E5E7EB] bg-white text-[#6B7280] active:bg-gray-50"
+                  )}
                 >
                   {c.symbol} {c.code}
                 </button>
@@ -199,14 +217,7 @@ export default function SavingsCalculator() {
               step={5}
               onChange={setCandidates}
             />
-            <SliderInput
-              label="Roles per month"
-              value={roles}
-              min={1}
-              max={50}
-              step={1}
-              onChange={setRoles}
-            />
+            <SliderInput label="Roles per month" value={roles} min={1} max={50} step={1} onChange={setRoles} />
             <SliderInput
               label="Minutes per screening call"
               value={minutes}
@@ -226,9 +237,8 @@ export default function SavingsCalculator() {
               onChange={setHourlyRate}
             />
 
-            {/* Time saved callout */}
-            <div style={{ background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 12, padding: "14px 18px", marginTop: 8 }}>
-              <p style={{ fontSize: 14, color: "#065F46", lineHeight: 1.6, margin: 0 }}>
+            <div className="mt-2 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] p-3.5 sm:p-4">
+              <p className="text-sm leading-relaxed text-[#065F46]">
                 <strong>85% reduction in screening time</strong>
                 <br />
                 That&apos;s <strong>{hoursSavedPerRole} hrs saved per role</strong> — time your team gets back.
@@ -236,54 +246,29 @@ export default function SavingsCalculator() {
             </div>
           </div>
 
-          {/* Right: Results */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Results */}
+          <div className="flex min-w-0 flex-col gap-4 lg:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <MetricCard label="Manual cost / month" value={manualMonthly} symbol={symbol} />
               <MetricCard label="Cost with Zobo / month" value={zoboMonthly} symbol={symbol} />
               <MetricCard label="Monthly savings" value={monthlySavings} symbol={symbol} highlight />
-              <div style={{
-                background: "linear-gradient(135deg, #1F2937 0%, #111827 100%)",
-                borderRadius: 14,
-                padding: "20px 20px",
-                boxShadow: "0 8px 32px rgba(31,41,55,0.2)",
-              }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 8 }}>Annual savings</p>
+              <div className="rounded-xl bg-gradient-to-br from-[#1F2937] to-[#111827] p-4 shadow-[0_8px_32px_rgba(31,41,55,0.2)] sm:col-span-2 sm:p-5">
+                <p className="mb-2 text-xs font-semibold text-white/60 sm:text-[13px]">Annual savings</p>
                 <AnimatedSavings value={annualSavings} symbol={symbol} />
               </div>
             </div>
 
-            {/* Mini chart */}
             <MiniBarChart monthlySavings={monthlySavings} symbol={symbol} />
 
-            {/* CTA */}
-            <Link href="/book-demo" style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              background: "linear-gradient(135deg, #0D9488 0%, #059669 100%)",
-              color: "#FFFFFF",
-              fontWeight: 700,
-              fontSize: 15,
-              borderRadius: 12,
-              padding: "14px 28px",
-              textDecoration: "none",
-              boxShadow: "0 4px 16px rgba(13,148,136,0.35)",
-              transition: "opacity 150ms",
-              marginTop: 4,
-            }}>
+            <Link
+              href="/book-demo"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#0D9488] to-[#059669] px-5 py-3.5 text-center text-[15px] font-bold text-white shadow-[0_4px_16px_rgba(13,148,136,0.35)] no-underline transition-opacity active:opacity-90"
+            >
               Start Saving — Get a Demo
             </Link>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .calc-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </section>
   );
 }
@@ -291,45 +276,55 @@ export default function SavingsCalculator() {
 function AnimatedSavings({ value, symbol }: { value: number; symbol: string }) {
   const animated = useAnimatedNumber(value);
   return (
-    <p style={{ fontSize: 26, fontWeight: 800, color: "#4FD1C7", letterSpacing: "-1px", lineHeight: 1 }}>
-      {symbol}{animated.toLocaleString()}
+    <p className="text-2xl font-extrabold leading-none tracking-tight text-[#4FD1C7] sm:text-[26px]">
+      {symbol}
+      {animated.toLocaleString()}
     </p>
   );
 }
 
 function MiniBarChart({ monthlySavings, symbol }: { monthlySavings: number; symbol: string }) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const monthsLong = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const cumulative = months.map((_, i) => monthlySavings * (i + 1));
   const maxVal = cumulative[11] || 1;
 
   return (
-    <div style={{ background: "#FFFFFF", borderRadius: 14, padding: "18px 20px", border: "1px solid #E5E7EB" }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 14 }}>
+    <div className="rounded-xl border border-[#E5E7EB] bg-white p-3 sm:p-5">
+      <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF] sm:mb-3.5 sm:text-xs">
         Cumulative savings over 12 months
       </p>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 64 }}>
-        {cumulative.map((val, i) => {
-          const h = Math.max(4, (val / maxVal) * 64);
-          return (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div
-                title={`${months[i]}: ${symbol}${val.toLocaleString()}`}
-                style={{
-                  width: "100%",
-                  height: h,
-                  borderRadius: "4px 4px 0 0",
-                  background: i === 11 ? "linear-gradient(180deg, #4FD1C7, #0D9488)" : "linear-gradient(180deg, #A7F3D0, #34D399)",
-                  transition: "height 400ms cubic-bezier(0.34,1.56,0.64,1)",
-                }}
-              />
-            </div>
-          );
-        })}
+      {/* Scroll on narrow screens so bars stay readable; full width on sm+ */}
+      <div className="-mx-1 overflow-x-auto overflow-y-hidden px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+        <div className="flex h-[4.5rem] min-w-[min(100%,22rem)] items-end justify-between gap-1 sm:min-w-0 sm:gap-1.5">
+          {cumulative.map((val, i) => {
+            const h = Math.max(6, (val / maxVal) * 72);
+            return (
+              <div key={i} className="flex min-w-[1.125rem] flex-1 flex-col items-center gap-1 sm:min-w-0">
+                <div
+                  title={`${monthsLong[i]}: ${symbol}${val.toLocaleString()}`}
+                  className={cn(
+                    "w-full rounded-t transition-[height] duration-300 ease-out",
+                    i === 11
+                      ? "bg-gradient-to-b from-[#4FD1C7] to-[#0D9488]"
+                      : "bg-gradient-to-b from-[#A7F3D0] to-[#34D399]"
+                  )}
+                  style={{ height: h }}
+                />
+                <span className="text-[9px] font-medium text-[#9CA3AF] sm:hidden">{months[i]}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-        <span style={{ fontSize: 10, color: "#9CA3AF" }}>Jan</span>
-        <span style={{ fontSize: 10, color: "#0D9488", fontWeight: 700 }}>{symbol}{(monthlySavings * 12).toLocaleString()} / yr</span>
-        <span style={{ fontSize: 10, color: "#9CA3AF" }}>Dec</span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-[#9CA3AF] sm:text-xs">
+        <span className="hidden sm:inline">Jan</span>
+        <span className="sm:hidden">Tap bars for month</span>
+        <span className="font-bold text-[#0D9488]">
+          {symbol}
+          {(monthlySavings * 12).toLocaleString()} / yr
+        </span>
+        <span className="hidden sm:inline">Dec</span>
       </div>
     </div>
   );

@@ -48,7 +48,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#F5F7FA] px-4 py-10 sm:py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
@@ -69,9 +69,9 @@ export default function SignupPage() {
           <p className="text-[#6B7280] mt-1">Start screening candidates with AI</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-8">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)] sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="name">Full Name</Label>
                 <Input id="name" placeholder="Jane Smith" value={form.name} onChange={update("name")} required />
