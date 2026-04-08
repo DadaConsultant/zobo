@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import SavingsCalculator from "@/components/landing/savings-calculator";
 import LandingHeader from "@/components/landing/landing-header";
+import { MarketingVideoPlayer } from "@/components/landing/marketing-video-player";
+import { WHY_TEAMS_CHOOSE_STATS } from "@/lib/why-teams-choose";
 
 export const metadata: Metadata = {
   title: "AI Interview Automation Tool | Screen Candidates Automatically | Zobo Jobs",
@@ -157,10 +159,10 @@ export default function HomePage() {
               Get a Demo
               <ArrowRight size={16} />
             </Link>
-            {/* <a href="#demo" className="ghost-btn inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-6 py-3.5 text-base font-medium text-[#374151] no-underline transition-colors sm:inline-flex sm:shrink-0">
+            <a href="#demo" className="ghost-btn inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-6 py-3.5 text-base font-medium text-[#374151] no-underline transition-colors sm:inline-flex sm:shrink-0">
               <Play size={15} fill="#374151" />
               Watch Sample Interview
-            </a> */}
+            </a>
           </div>
 
           {/* Trust line */}
@@ -287,17 +289,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Interview UI */}
-            <div className="relative aspect-[16/10] w-full">
-              <Image
-                src="/ai_interviewer_zobo.webp"
-                alt="Zobo Jobs Demo Visual"
-                fill
-                className="object-cover object-top"
-                sizes="(max-width: 900px) 100vw, 900px"
-                priority
-              />
-            </div>
+            {/* Interview UI — Remotion Player (see remotion/) */}
+            <MarketingVideoPlayer />
           </div>
 
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", marginTop: 24 }}>
@@ -384,11 +377,7 @@ export default function HomePage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
-            {[
-              { value: "10x", label: "Faster screening", detail: "Replace hours of manual interviews with automated AI-led conversations." },
-              { value: "1400+", label: "Interview conducted", detail: "We have an AI that have conducted 1400+ minutes of interviews, and we are still improving it." },
-              { value: "3 minutes", label: "To set up", detail: "Create your interview in under three minutes — no training needed." },
-            ].map((s) => (
+            {WHY_TEAMS_CHOOSE_STATS.map((s) => (
               <div key={s.label} className="px-6 py-10 text-center md:px-9 md:py-11">
                 <div style={{ fontSize: 56, fontWeight: 800, color: "#4FD1C7", lineHeight: 1, marginBottom: 8, letterSpacing: "-2px" }}>{s.value}</div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 12 }}>{s.label}</div>
