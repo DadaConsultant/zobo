@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight, CheckCircle, Shield, Link2,
@@ -156,10 +157,10 @@ export default function HomePage() {
               Get a Demo
               <ArrowRight size={16} />
             </Link>
-            <a href="#demo" className="ghost-btn inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-6 py-3.5 text-base font-medium text-[#374151] no-underline transition-colors sm:inline-flex sm:shrink-0">
+            {/* <a href="#demo" className="ghost-btn inline-flex items-center justify-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-white px-6 py-3.5 text-base font-medium text-[#374151] no-underline transition-colors sm:inline-flex sm:shrink-0">
               <Play size={15} fill="#374151" />
               Watch Sample Interview
-            </a>
+            </a> */}
           </div>
 
           {/* Trust line */}
@@ -218,48 +219,15 @@ export default function HomePage() {
                 <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 8 }}>zobo-interview-session</span>
               </div>
               {/* Content */}
-              <div style={{ padding: 24 }}>
-                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
-                  {/* AI box */}
-                  <div style={{ background: "#1F2937", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-                    <div style={{ width: 40, height: 40, background: "#4FD1C7", borderRadius: "50%", margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Zap size={18} color="#1F2937" fill="#1F2937" />
-                    </div>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>AI INTERVIEWER</p>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 3 }}>
-                      {[4, 7, 5, 8, 4].map((h, i) => (
-                        <div key={i} style={{ width: 3, height: h * 2, background: "#4FD1C7", borderRadius: 2, opacity: 0.8 }} />
-                      ))}
-                    </div>
-                  </div>
-                  {/* Candidate box */}
-                  <div style={{ background: "#F5F7FA", borderRadius: 12, padding: "20px 16px", textAlign: "center", border: "1px solid #E5E7EB" }}>
-                    <div style={{ width: 40, height: 40, background: "#E5E7EB", borderRadius: "50%", margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Users size={18} color="#6B7280" />
-                    </div>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", marginBottom: 4 }}>CANDIDATE</p>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 3 }}>
-                      {[3, 5, 7, 4, 6].map((h, i) => (
-                        <div key={i} style={{ width: 3, height: h * 2, background: "#D1D5DB", borderRadius: 2 }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {/* Transcript */}
-                <div style={{ background: "#F5F7FA", borderRadius: 10, padding: "12px 14px", marginBottom: 12, border: "1px solid #E5E7EB" }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "#4FD1C7", marginBottom: 6 }}>LIVE TRANSCRIPT</p>
-                  <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.5 }}>"Tell me about a time you led a project under a tight deadline…"</p>
-                </div>
-                {/* Score */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1F2937", borderRadius: 10, padding: "10px 14px" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Questions Answered</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 80, height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" }}>
-                      <div style={{ width: "87%", height: "100%", background: "#4FD1C7", borderRadius: 3 }} />
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7" }}>6/7</span>
-                  </div>
-                </div>
+              <div className="relative aspect-[10/10] w-full">
+                <Image
+                  src="/ai_zobo_get_ready.webp"
+                  alt="Zobo Jobs Get Ready Screen"
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 900px) 100vw, 900px"
+                  priority
+                />
               </div>
             </div>
           </div>
@@ -315,67 +283,20 @@ export default function HomePage() {
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B" }} />
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10B981" }} />
               <div className="min-w-0 flex-1 rounded-md border border-[#E5E7EB] bg-white py-1.5 pl-3 pr-2 text-left text-[11px] text-[#9CA3AF] sm:ml-3 sm:text-xs">
-                <span className="block truncate">app.zobojobs.com/interview/senior-engineer-2026</span>
+                <span className="block truncate">app.zobojobs.com/interview/junior-engineer-2026</span>
               </div>
             </div>
 
             {/* Interview UI */}
-            <div className="bg-[#0F172A] p-4 sm:p-8">
-              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {/* AI panel */}
-                <div style={{ background: "#1E293B", borderRadius: 14, padding: 24, textAlign: "center", border: "2px solid #4FD1C7" }}>
-                  <div style={{ width: 56, height: 56, background: "linear-gradient(135deg, #1F2937, #374151)", borderRadius: "50%", margin: "0 auto 12px", border: "3px solid #4FD1C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Zap size={24} color="#4FD1C7" />
-                  </div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#4FD1C7", marginBottom: 8, letterSpacing: "0.5px" }}>ZOBO AI</p>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 3, marginBottom: 12 }}>
-                    {[5, 9, 6, 11, 7, 9, 5].map((h, i) => (
-                      <div key={i} style={{ width: 3, height: h * 2, background: "#4FD1C7", borderRadius: 2 }} />
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
-                    "Great example. Can you walk me through the technical decisions you made?"
-                  </p>
-                </div>
-
-                {/* Candidate panel */}
-                <div style={{ background: "#1E293B", borderRadius: 14, padding: 24, textAlign: "center" }}>
-                  <div style={{ width: 56, height: 56, background: "#374151", borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Users size={24} color="rgba(255,255,255,0.5)" />
-                  </div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 8, letterSpacing: "0.5px" }}>CANDIDATE</p>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 3, marginBottom: 12 }}>
-                    {[4, 6, 4, 7, 5, 4, 6].map((h, i) => (
-                      <div key={i} style={{ width: 3, height: h * 2, background: "rgba(255,255,255,0.2)", borderRadius: 2 }} />
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>Listening...</p>
-                </div>
-              </div>
-
-              {/* Transcript bar */}
-              <div style={{ background: "#1E293B", borderRadius: 10, padding: "14px 18px", marginBottom: 16, textAlign: "left" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#4FD1C7", marginBottom: 6 }}>LIVE TRANSCRIPT</p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.6 }}>
-                  <span style={{ color: "#4FD1C7" }}>[Zobo]</span> "Tell me about a time you had to architect a system under time pressure. What trade-offs did you make?"
-                </p>
-              </div>
-
-              {/* Progress + score row */}
-              <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto]">
-                <div style={{ background: "#1E293B", borderRadius: 10, padding: "10px 14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>
-                    <span>Interview progress</span><span>Q3 of 5</span>
-                  </div>
-                  <div style={{ height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
-                    <div style={{ width: "60%", height: "100%", background: "#4FD1C7", borderRadius: 2 }} />
-                  </div>
-                </div>
-                {/* <div style={{ background: "#4FD1C7", borderRadius: 10, padding: "10px 20px", textAlign: "center" }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "#1F2937", marginBottom: 2 }}>SCORE</p>
-                  <p style={{ fontSize: 20, fontWeight: 800, color: "#1F2937" }}>82%</p>
-                </div> */}
-              </div>
+            <div className="relative aspect-[16/10] w-full">
+              <Image
+                src="/ai_interviewer_zobo.webp"
+                alt="Zobo Jobs Demo Visual"
+                fill
+                className="object-cover object-top"
+                sizes="(max-width: 900px) 100vw, 900px"
+                priority
+              />
             </div>
           </div>
 
@@ -465,8 +386,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
             {[
               { value: "10x", label: "Faster screening", detail: "Replace hours of manual interviews with automated AI-led conversations." },
-              { value: "85%", label: "Time saved per hire", detail: "Recruiters get time back to focus on closing top candidates." },
-              { value: "3 min", label: "To set up", detail: "Create your interview in under three minutes — no training needed." },
+              { value: "1400+", label: "Interview conducted", detail: "We have an AI that have conducted 1400+ minutes of interviews, and we are still improving it." },
+              { value: "3 minutes", label: "To set up", detail: "Create your interview in under three minutes — no training needed." },
             ].map((s) => (
               <div key={s.label} className="px-6 py-10 text-center md:px-9 md:py-11">
                 <div style={{ fontSize: 56, fontWeight: 800, color: "#4FD1C7", lineHeight: 1, marginBottom: 8, letterSpacing: "-2px" }}>{s.value}</div>
