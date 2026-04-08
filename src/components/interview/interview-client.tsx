@@ -36,6 +36,27 @@ interface InterviewClientProps {
   company: string;
 }
 
+/** Seconds to respond after each AI prompt (optional env override). */
+const ANSWER_WINDOW_SECONDS = (() => {
+  const raw =
+    typeof process.env.NEXT_PUBLIC_INTERVIEW_ANSWER_SECONDS === "string"
+      ? parseInt(process.env.NEXT_PUBLIC_INTERVIEW_ANSWER_SECONDS, 10)
+      : NaN;
+  const n = Number.isFinite(raw) ? raw : 120;
+  return Math.min(600, Math.max(30, n));
+})();
+
+/** Stored in transcript / sent to the model when the per-question timer fires. */
+const TIMEOUT_TRANSCRIPT_MARKER =
+  "[Time expired for this question — moving on to stay on schedule.]";
+
+function displayTranscriptContent(content: string): string {
+  if (content.startsWith("[Time expired for this question")) {
+    return "Time's up — moving to the next part of the interview.";
+  }
+  return content;
+}
+
 // ─── Visual sub-components ────────────────────────────────────────────────────
 
 const PARTICLES = Array.from({ length: 28 }, (_, i) => ({
@@ -277,6 +298,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [cameraTrackEnded, setCameraTrackEnded] = useState(false);
   const [preparingCountdown, setPreparingCountdown] = useState<number | null>(null);
+  /** Remaining seconds to answer after the AI finishes speaking; null when not counting. */
+  const [answerSecondsRemaining, setAnswerSecondsRemaining] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
   // Audio-only per-answer recorder
@@ -300,6 +323,17 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const lastAiMessageRef  = useRef("");
   const introAudioUrlRef  = useRef<string | null>(null);
 
+  const answerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const answerDeadlineRef = useRef<number | null>(null);
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const questionIndexRef = useRef(0);
+  const scriptRef = useRef<InterviewScript | null>(null);
+  const interviewIdRef = useRef("");
+  const followUpCountRef = useRef(0);
+  const phaseRef = useRef<Phase>("entry");
+  const isThinkingRef = useRef(false);
+  const handleQuestionTimeoutRef = useRef<() => Promise<void>>(async () => {});
+
   const currentQuestion = script?.questions[questionIndex];
   const totalQuestions  = script?.questions.length ?? 0;
   const progress        = totalQuestions > 0 ? ((questionIndex + 1) / totalQuestions) * 100 : 0;
@@ -307,6 +341,70 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
+
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  useEffect(() => {
+    questionIndexRef.current = questionIndex;
+  }, [questionIndex]);
+  useEffect(() => {
+    scriptRef.current = script;
+  }, [script]);
+  useEffect(() => {
+    interviewIdRef.current = interviewId;
+  }, [interviewId]);
+  useEffect(() => {
+    followUpCountRef.current = followUpCount;
+  }, [followUpCount]);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  useEffect(() => {
+    isThinkingRef.current = isThinking;
+  }, [isThinking]);
+
+  const clearAnswerCountdown = useCallback(() => {
+    if (answerTimerRef.current) {
+      clearInterval(answerTimerRef.current);
+      answerTimerRef.current = null;
+    }
+    answerDeadlineRef.current = null;
+    setAnswerSecondsRemaining(null);
+  }, []);
+
+  const beginAnswerCountdown = useCallback(() => {
+    if (phaseRef.current !== "interview" || isClosingRef.current || isCameraOff) return;
+    clearAnswerCountdown();
+    const seconds = ANSWER_WINDOW_SECONDS;
+    answerDeadlineRef.current = Date.now() + seconds * 1000;
+    setAnswerSecondsRemaining(seconds);
+    answerTimerRef.current = setInterval(() => {
+      const deadline = answerDeadlineRef.current;
+      if (!deadline) return;
+      const left = Math.ceil((deadline - Date.now()) / 1000);
+      if (left <= 0) {
+        clearAnswerCountdown();
+        void handleQuestionTimeoutRef.current();
+      } else {
+        setAnswerSecondsRemaining(left);
+      }
+    }, 250);
+  }, [clearAnswerCountdown, isCameraOff]);
+
+  useEffect(() => {
+    if (isCameraOff) clearAnswerCountdown();
+  }, [isCameraOff, clearAnswerCountdown]);
+
+  useEffect(() => {
+    if (phase !== "interview") clearAnswerCountdown();
+  }, [phase, clearAnswerCountdown]);
+
+  useEffect(() => {
+    return () => {
+      if (answerTimerRef.current) clearInterval(answerTimerRef.current);
+    };
+  }, []);
 
   // ── Network detection ──────────────────────────────────────────────────────
 
@@ -536,6 +634,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── TTS ────────────────────────────────────────────────────────────────────
 
   const speakText = useCallback((text: string, preloadedUrl?: string): Promise<void> => {
+    clearAnswerCountdown();
     lastAiMessageRef.current = text;
     setAiSpeaking(true);
 
@@ -586,7 +685,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     });
   // isCameraOff intentionally excluded — checked via ref pattern inside
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interviewId]);
+  }, [interviewId, clearAnswerCountdown]);
 
   // ── Per-answer audio recording (uses audio track from video stream) ─────────
 
@@ -616,9 +715,11 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
     recorder.start();
     setIsRecording(true);
+    beginAnswerCountdown();
   }
 
   function stopRecording() {
+    clearAnswerCountdown();
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
     mediaRecorderRef.current.stop();
     setIsRecording(false);
@@ -630,6 +731,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── STT + AI response ──────────────────────────────────────────────────────
 
   async function processAudio() {
+    clearAnswerCountdown();
+
     const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
 
     if (blob.size < 1000) {
@@ -777,6 +880,86 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
     setPhase("complete");
   }
+
+  async function handleQuestionTimeout() {
+    if (isClosingRef.current || phaseRef.current !== "interview") return;
+    if (isThinkingRef.current) return;
+
+    clearAnswerCountdown();
+    discardAudioRef.current = true;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setIsThinking(true);
+
+    const scriptSnap = scriptRef.current;
+    const qIdx = questionIndexRef.current;
+    const id = interviewIdRef.current;
+    const currentQ = scriptSnap?.questions[qIdx];
+    if (!scriptSnap || !currentQ || !id) {
+      setIsThinking(false);
+      return;
+    }
+
+    const totalQ = scriptSnap.questions.length;
+    const isLastQuestion = qIdx >= totalQ - 1;
+    const nextQ = scriptSnap.questions[qIdx + 1] ?? null;
+    const replyPhase: "advance" | "closing" = isLastQuestion ? "closing" : "advance";
+
+    const timeoutEntry: TranscriptEntry = {
+      role: "candidate",
+      content: TIMEOUT_TRANSCRIPT_MARKER,
+      timestamp: Date.now(),
+    };
+    const prev = transcriptRef.current;
+    const updatedTranscript = [...prev, timeoutEntry];
+    transcriptRef.current = updatedTranscript;
+    setTranscript(updatedTranscript);
+
+    let aiText = "";
+    let endSession = false;
+    try {
+      const res = await fetch(`/api/interviews/${id}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: updatedTranscript,
+          currentQuestion: currentQ,
+          nextQuestion: replyPhase === "advance" ? nextQ : null,
+          replyPhase,
+        }),
+      });
+      const data = await res.json();
+      aiText = data.response || "";
+      endSession = Boolean(data.endSession);
+    } catch {
+      aiText = "Thanks — we need to keep moving so we stay on schedule.";
+      endSession = false;
+    }
+
+    const aiEntry: TranscriptEntry = { role: "ai", content: aiText, timestamp: Date.now() };
+    const transcriptWithAi = [...updatedTranscript, aiEntry];
+    transcriptRef.current = transcriptWithAi;
+
+    const scriptedClose = isLastQuestion;
+    if (scriptedClose || endSession) {
+      setTranscript(transcriptWithAi);
+      setIsThinking(false);
+      isClosingRef.current = true;
+      await speakText(aiText);
+      await completeInterview(transcriptWithAi);
+      return;
+    }
+
+    setQuestionIndex((i) => i + 1);
+    setFollowUpCount(0);
+    setTranscript(transcriptWithAi);
+    setIsThinking(false);
+    await speakText(aiText);
+  }
+
+  handleQuestionTimeoutRef.current = handleQuestionTimeout;
 
   // ── Start interview: countdown + pre-fetch audio ──────────────────────────
 
@@ -1220,6 +1403,27 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span className="text-red-400/80 text-xs font-medium">REC</span>
             </div>
+            {answerSecondsRemaining !== null && (
+              <div
+                className={cn(
+                  "hidden min-w-[4.5rem] flex-col items-end tabular-nums sm:flex sm:flex-col",
+                  answerSecondsRemaining <= 15 && "animate-pulse"
+                )}
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-cyan-400/55">
+                  Time left
+                </span>
+                <span
+                  className={cn(
+                    "text-base font-bold leading-none text-white",
+                    answerSecondsRemaining <= 15 ? "text-amber-400" : "text-cyan-200"
+                  )}
+                >
+                  {String(Math.floor(answerSecondsRemaining / 60)).padStart(2, "0")}:
+                  {String(answerSecondsRemaining % 60).padStart(2, "0")}
+                </span>
+              </div>
+            )}
             <div className="text-right">
               <p className="text-cyan-400/60 text-xs mb-1.5">
                 Question {Math.min(questionIndex + 1, totalQuestions)} / {totalQuestions}
@@ -1311,10 +1515,31 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
           <span className={cn("text-sm font-semibold tracking-wide transition-all duration-300 text-center", stateColor)}>
             {stateLabel}
           </span>
+          {answerSecondsRemaining !== null && isRecording && (
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 sm:hidden",
+                answerSecondsRemaining <= 15
+                  ? "border-amber-500/50 bg-amber-500/10"
+                  : "border-cyan-500/30 bg-cyan-500/10"
+              )}
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-cyan-400/70">Time left</span>
+              <span
+                className={cn(
+                  "font-mono text-lg font-bold tabular-nums",
+                  answerSecondsRemaining <= 15 ? "text-amber-400" : "text-cyan-200"
+                )}
+              >
+                {String(Math.floor(answerSecondsRemaining / 60)).padStart(2, "0")}:
+                {String(answerSecondsRemaining % 60).padStart(2, "0")}
+              </span>
+            </div>
+          )}
           {isRecording && (
             <p className="text-xs text-emerald-200/65 text-center max-w-xs leading-relaxed px-2">
               When you&apos;re done speaking, tap the <span className="text-red-400/90 font-medium">red stop button</span>{" "}
-              below — that sends your answer to the interviewer.
+              below — that sends your answer to the interviewer. If time runs out, we&apos;ll move on automatically.
             </p>
           )}
         </div>
@@ -1333,7 +1558,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
                 style={entry.role === "ai"
                   ? { background: "rgba(34,211,238,0.07)", border: "1px solid rgba(34,211,238,0.15)", color: "rgba(207,250,254,0.9)" }
                   : { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "rgba(167,243,208,0.9)" }}>
-                {entry.content}
+                {displayTranscriptContent(entry.content)}
               </div>
             </div>
           ))}
