@@ -28,7 +28,7 @@ export default async function JobsPage() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {isPending && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
           <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -53,22 +53,22 @@ export default async function JobsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-          <p className="text-gray-500 mt-1">Manage your job listings and interviews</p>
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Jobs</h1>
+          <p className="mt-1 text-sm text-gray-500 sm:text-base">Manage your job listings and interviews</p>
         </div>
         {isBlocked ? (
-          <div title={isPending ? "Awaiting admin approval" : "Account suspended"}>
-            <Button disabled className="opacity-50 cursor-not-allowed">
-              <Plus className="w-4 h-4" />
+          <div className="shrink-0" title={isPending ? "Awaiting admin approval" : "Account suspended"}>
+            <Button disabled className="w-full cursor-not-allowed opacity-50 sm:w-auto">
+              <Plus className="h-4 w-4" />
               Create Job
             </Button>
           </div>
         ) : (
-          <Link href="/jobs/new">
-            <Button>
-              <Plus className="w-4 h-4" />
+          <Link href="/jobs/new" className="shrink-0">
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
               Create Job
             </Button>
           </Link>
@@ -100,27 +100,30 @@ export default async function JobsPage() {
                 : 0;
 
             return (
-              <div key={job.id} className="bg-white rounded-xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-6 flex items-center justify-between hover:border-[#1F2937]/30 transition-colors">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-lg font-semibold text-gray-900">{job.title}</h2>
+              <div
+                key={job.id}
+                className="flex flex-col gap-4 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-colors hover:border-[#1F2937]/30 sm:p-6 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2 gap-y-2">
+                    <h2 className="text-base font-semibold text-gray-900 sm:text-lg">{job.title}</h2>
                     <Badge variant={job.status === "ACTIVE" ? "success" : job.status === "PAUSED" ? "warning" : "secondary"}>
                       {job.status.toLowerCase()}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-5 text-sm text-gray-500 mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
                     <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" />
+                      <Users className="h-3.5 w-3.5 shrink-0" />
                       {job._count.candidates} candidates
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Link2 className="w-3.5 h-3.5" />
+                      <Link2 className="h-3.5 w-3.5 shrink-0" />
                       {completionRate}% completion
                     </span>
-                    <span>Created {new Date(job.createdAt).toLocaleDateString()}</span>
+                    <span className="text-xs sm:text-sm">Created {new Date(job.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
-                    <code className="text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded border border-gray-100">
+                  <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+                    <code className="break-all rounded border border-gray-100 bg-gray-50 px-2 py-1 text-xs text-gray-600">
                       /interview/{job.interviewLink}
                     </code>
                     <CopyButton
@@ -130,9 +133,11 @@ export default async function JobsPage() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-6">
-                  <Link href={`/jobs/${job.id}`}>
-                    <Button variant="outline" size="sm">View Candidates</Button>
+                <div className="flex shrink-0 lg:ml-0">
+                  <Link href={`/jobs/${job.id}`} className="w-full lg:w-auto">
+                    <Button variant="outline" size="sm" className="w-full lg:w-auto">
+                      View Candidates
+                    </Button>
                   </Link>
                 </div>
               </div>

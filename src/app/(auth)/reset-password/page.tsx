@@ -251,7 +251,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#F5F7FA] px-4 py-10 sm:py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
@@ -262,7 +262,7 @@ export default function ResetPasswordPage() {
           <p className="text-[#6B7280] mt-1">Enter your reset code and choose a new password</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-8">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)] sm:p-8">
           <Suspense fallback={<div className="h-64 flex items-center justify-center text-sm text-gray-400">Loading…</div>}>
             <ResetPasswordForm />
           </Suspense>

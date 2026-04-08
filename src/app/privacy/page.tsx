@@ -37,14 +37,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} style={{ marginBottom: 56, scrollMarginTop: 100 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+    <section id={id} className="mb-12 scroll-mt-24 md:mb-14">
+      <div className="mb-4 flex flex-wrap items-baseline gap-3">
         <span style={{ fontSize: 13, fontWeight: 700, color: "#4FD1C7", minWidth: 28 }}>{num}</span>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.4px", margin: 0 }}>
+        <h2 className="min-w-0 text-lg font-bold tracking-tight text-[#1A1A1A] sm:text-[22px]" style={{ margin: 0 }}>
           {title}
         </h2>
       </div>
-      <div style={{ paddingLeft: 40 }}>{children}</div>
+      <div className="pl-0 sm:pl-8 md:pl-10">{children}</div>
     </section>
   );
 }
@@ -102,8 +102,8 @@ export default function PrivacyPage() {
 
       {/* Navbar */}
       <header style={{ background: "rgba(245,247,250,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E5E7EB", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+        <div className="mx-auto flex h-[68px] max-w-[1200px] items-center justify-between gap-3 px-4 sm:px-6">
+          <Link href="/" className="flex min-w-0 items-center gap-2 no-underline">
             <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
               <circle cx="20" cy="8"  r="4" fill="#1A1A1A" />
               <circle cx="8"  cy="28" r="4" fill="#1A1A1A" />
@@ -113,18 +113,19 @@ export default function PrivacyPage() {
               <line x1="17" y1="22" x2="10" y2="26" stroke="#1A1A1A" strokeWidth="1.5" />
               <line x1="23" y1="22" x2="30" y2="26" stroke="#1A1A1A" strokeWidth="1.5" />
             </svg>
-            <span style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.3px" }}>Zobo Jobs</span>
+            <span className="truncate text-base font-bold tracking-tight text-[#1A1A1A] sm:text-lg" style={{ letterSpacing: "-0.3px" }}>Zobo Jobs</span>
           </Link>
-          <Link href="/" className="back-link" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 500, color: "#6B7280", textDecoration: "none", transition: "color 150ms" }}>
-            <ArrowLeft size={15} />
-            Back to Home
+          <Link href="/" className="back-link inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-[#6B7280] no-underline transition-colors sm:gap-2">
+            <ArrowLeft size={15} className="shrink-0" />
+            <span className="hidden sm:inline">Back to Home</span>
+            <span className="sm:hidden">Back</span>
           </Link>
         </div>
       </header>
 
       {/* Hero strip */}
-      <div style={{ background: "#1F2937", padding: "56px 24px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+      <div className="bg-[#1F2937] px-4 py-10 sm:px-6 sm:py-14">
+        <div className="mx-auto max-w-[860px]">
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{ width: 40, height: 40, background: "rgba(79,209,199,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Lock size={20} color="#4FD1C7" />
@@ -141,12 +142,12 @@ export default function PrivacyPage() {
       </div>
 
       {/* Main layout: TOC sidebar + content */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 24px", display: "grid", gridTemplateColumns: "240px 1fr", gap: 64, alignItems: "start" }}>
+      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-10 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,240px)_1fr] lg:gap-16 lg:px-6 lg:py-16">
 
         {/* Table of contents */}
-        <aside style={{ position: "sticky", top: 92 }}>
+        <aside className="lg:sticky lg:top-[92px]">
           <p style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "1.2px", textTransform: "uppercase", marginBottom: 16 }}>Contents</p>
-          <nav style={{ display: "flex", flexDirection: "column" }}>
+          <nav className="flex max-h-56 flex-col overflow-y-auto pr-1 lg:max-h-none">
             {TOC.map((item) => (
               <a key={item.id} href={`#${item.id}`} className="toc-link" style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "4px 0", borderLeft: "2px solid #E5E7EB", paddingLeft: 12 }}>
                 <span style={{ fontSize: 12, color: "#9CA3AF", minWidth: 20, fontWeight: 600 }}>{item.num}</span>
@@ -159,7 +160,7 @@ export default function PrivacyPage() {
         {/* Content */}
         <main>
           {/* Intro */}
-          <div style={{ background: "#FFFFFF", borderRadius: 16, border: "1px solid #E5E7EB", padding: "28px 32px", marginBottom: 48, boxShadow: "0 4px 24px rgba(0,0,0,0.05)" }}>
+          <div className="mb-10 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.05)] sm:mb-12 sm:p-7 md:p-8">
             <P>
               This Privacy Policy explains how Zobo Jobs ("Zobo", "we", "our") collects, uses, stores, and protects personal data when you use our AI-driven interview automation platform.
             </P>
@@ -323,13 +324,13 @@ export default function PrivacyPage() {
       </div>
 
       {/* Footer */}
-      <footer style={{ background: "#111827", padding: "40px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <footer className="border-t border-white/[0.06] bg-[#111827] px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mx-auto flex max-w-[1100px] flex-col items-center gap-5 text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left">
+          <div className="flex items-center gap-2.5">
             <ZoboMarkWhite size={24} />
             <span style={{ color: "#FFFFFF", fontWeight: 700, fontSize: 16 }}>Zobo Jobs</span>
           </div>
-          <div style={{ display: "flex", gap: 28 }}>
+          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:justify-end" aria-label="Footer">
             {[
               { label: "Cost Calculator",     href: "#costcalculator" },
               { label: "Security", href: "#" },
@@ -342,8 +343,8 @@ export default function PrivacyPage() {
                 {label}
               </a>
             ))}
-          </div>
-          <p style={{ fontSize: 13, color: "#4B5563" }}>© 2026 Zobo Jobs — AI Interview Infrastructure.</p>
+          </nav>
+          <p className="w-full text-balance text-center text-[13px] text-[#4B5563] sm:w-auto sm:text-left">© 2026 Zobo Jobs — AI Interview Infrastructure.</p>
         </div>
       </footer>
     </div>

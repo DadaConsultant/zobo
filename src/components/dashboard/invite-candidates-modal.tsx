@@ -9,9 +9,11 @@ import { Mail, X, Plus, Upload, CheckCircle, AlertCircle } from "lucide-react";
 
 interface InviteCandidatesModalProps {
   jobId: string;
+  /** Applied to the trigger button (e.g. `w-full sm:w-auto` on narrow layouts). */
+  triggerClassName?: string;
 }
 
-export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalProps) {
+export default function InviteCandidatesModal({ jobId, triggerClassName }: InviteCandidatesModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,8 +88,8 @@ export default function InviteCandidatesModal({ jobId }: InviteCandidatesModalPr
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <Mail className="w-4 h-4" />
+      <Button variant="outline" className={triggerClassName} onClick={() => setOpen(true)}>
+        <Mail className="h-4 w-4" />
         Invite Candidates
       </Button>
 

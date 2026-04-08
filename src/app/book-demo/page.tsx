@@ -103,7 +103,7 @@ export default function BookDemoPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-8">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)] sm:p-8">
           {done ? (
             <div className="text-center py-4">
               <CheckCircle className="w-14 h-14 text-[#0D9488] mx-auto mb-4" />

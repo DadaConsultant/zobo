@@ -56,35 +56,49 @@ export default async function CandidateDetailPage({
     : [];
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="mx-auto w-full max-w-4xl p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <Link href={`/jobs/${candidate.jobId}`}>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
-            <Badge variant={
-              candidate.interview?.status === "COMPLETED" ? "success" :
-              candidate.interview?.status === "ABANDONED" ? "destructive" :
-              "secondary"
-            }>
-              {candidate.interview?.status === "ABANDONED" ? "interrupted" : candidate.status.toLowerCase()}
-            </Badge>
+      <div className="mb-6 space-y-4 sm:mb-8">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <Link href={`/jobs/${candidate.jobId}`} className="shrink-0 pt-0.5">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 gap-y-2">
+              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{candidate.name}</h1>
+              <Badge
+                variant={
+                  candidate.interview?.status === "COMPLETED"
+                    ? "success"
+                    : candidate.interview?.status === "ABANDONED"
+                      ? "destructive"
+                      : "secondary"
+                }
+              >
+                {candidate.interview?.status === "ABANDONED" ? "interrupted" : candidate.status.toLowerCase()}
+              </Badge>
+            </div>
+            <p className="mt-1 break-words text-sm text-gray-500">
+              {candidate.email} · {candidate.job.title}
+            </p>
           </div>
-          <p className="text-gray-500 text-sm mt-0.5">
-            {candidate.email} · {candidate.job.title}
-          </p>
+          {scores && (
+            <div className="hidden shrink-0 text-right sm:block">
+              <div className={cn("text-3xl font-black lg:text-4xl", getScoreColor(scores.overall))}>
+                {Math.round(scores.overall)}%
+              </div>
+              <p className="text-xs text-gray-400">Overall Score</p>
+            </div>
+          )}
         </div>
         {scores && (
-          <div className="text-right">
-            <div className={cn("text-4xl font-black", getScoreColor(scores.overall))}>
+          <div className="flex items-center gap-3 border-y border-gray-100 py-3 sm:hidden">
+            <div className={cn("text-3xl font-black", getScoreColor(scores.overall))}>
               {Math.round(scores.overall)}%
             </div>
-            <p className="text-xs text-gray-400">Overall Score</p>
+            <span className="text-sm text-gray-500">Overall score</span>
           </div>
         )}
       </div>
@@ -106,41 +120,15 @@ export default async function CandidateDetailPage({
           </div>
 
           {(scores || (transcript && transcript.length > 0)) && (
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-1 space-y-4">
-                {scores && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <TrendingUp className="w-4 h-4" />
-                        Partial Score Breakdown
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-4">
-                      {scoreItems.map((item) => (
-                        <div key={item.label}>
-                          <div className="flex justify-between text-sm mb-1.5">
-                            <span className="text-gray-600">{item.label}</span>
-                            <span className={cn("font-bold", getScoreColor(item.value))}>
-                              {Math.round(item.value)}
-                            </span>
-                          </div>
-                          <Progress value={item.value} />
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="col-span-2 space-y-4">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+              <div className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-2 lg:gap-6">
                 {candidate.interview?.summary && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">Partial AI Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <p className="text-gray-700 leading-relaxed">{candidate.interview.summary}</p>
+                      <p className="leading-relaxed text-gray-700">{candidate.interview.summary}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -148,21 +136,55 @@ export default async function CandidateDetailPage({
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-sm">
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="h-4 w-4" />
                         Partial Transcript
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0 space-y-3 max-h-[400px] overflow-y-auto">
+                    <CardContent className="max-h-[min(55vh,400px)] space-y-3 overflow-y-auto pt-0 sm:max-h-[400px]">
                       {transcript.map((entry, i) => (
                         <div key={i} className={cn("flex gap-3", entry.role === "ai" ? "flex-row" : "flex-row-reverse")}>
-                          <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-                            entry.role === "ai" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600")}>
+                          <div
+                            className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                              entry.role === "ai" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"
+                            )}
+                          >
                             {entry.role === "ai" ? "Z" : "C"}
                           </div>
-                          <div className={cn("max-w-[80%] px-4 py-2.5 rounded-xl text-sm",
-                            entry.role === "ai" ? "bg-indigo-50 text-indigo-900" : "bg-gray-100 text-gray-800")}>
+                          <div
+                            className={cn(
+                              "max-w-[85%] rounded-xl px-3 py-2 text-sm sm:max-w-[80%] sm:px-4 sm:py-2.5",
+                              entry.role === "ai" ? "bg-indigo-50 text-indigo-900" : "bg-gray-100 text-gray-800"
+                            )}
+                          >
                             {entry.content}
                           </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="order-2 flex flex-col gap-4 lg:order-1 lg:col-span-1">
+                {scores && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <TrendingUp className="h-4 w-4" />
+                        Partial Score Breakdown
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-0">
+                      {scoreItems.map((item) => (
+                        <div key={item.label}>
+                          <div className="mb-1.5 flex justify-between text-sm">
+                            <span className="text-gray-600">{item.label}</span>
+                            <span className={cn("font-bold", getScoreColor(item.value))}>
+                              {Math.round(item.value)}
+                            </span>
+                          </div>
+                          <Progress value={item.value} />
                         </div>
                       ))}
                     </CardContent>
@@ -180,17 +202,86 @@ export default async function CandidateDetailPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-3 gap-6">
-          {/* Left: Scores */}
-          <div className="col-span-1 space-y-4">
-            {/* Recommendation */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+          {/* Mobile order: recording + summary + transcript first */}
+          <div className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-2 lg:gap-6">
+            {videoUrl && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Video className="h-4 w-4" />
+                    Interview Recording
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="overflow-hidden rounded-lg bg-black">
+                    <video
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      className="max-h-[min(50vh,260px)] w-full object-contain sm:max-h-[min(58vh,360px)] lg:max-h-[360px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {candidate.interview.summary && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">AI Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="leading-relaxed text-gray-700">{candidate.interview.summary}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {transcript && transcript.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <MessageSquare className="h-4 w-4" />
+                    Interview Transcript
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="max-h-[min(55vh,500px)] space-y-3 overflow-y-auto pt-0 sm:max-h-[500px]">
+                  {transcript.map((entry, i) => (
+                    <div
+                      key={i}
+                      className={cn("flex gap-3", entry.role === "ai" ? "flex-row" : "flex-row-reverse")}
+                    >
+                      <div
+                        className={cn(
+                          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                          entry.role === "ai" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"
+                        )}
+                      >
+                        {entry.role === "ai" ? "Z" : "C"}
+                      </div>
+                      <div
+                        className={cn(
+                          "max-w-[85%] rounded-xl px-3 py-2 text-sm sm:max-w-[80%] sm:px-4 sm:py-2.5",
+                          entry.role === "ai" ? "bg-indigo-50 text-indigo-900" : "bg-gray-100 text-gray-800"
+                        )}
+                      >
+                        {entry.content}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="order-2 flex flex-col gap-4 lg:order-1 lg:col-span-1">
             <Card>
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-1">
+              <CardContent className="p-4 sm:p-5">
+                <div className="mb-1 flex items-center gap-2">
                   {candidate.interview.recommendation ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <CheckCircle className="h-5 w-5 text-green-500" />
                   ) : (
-                    <XCircle className="w-5 h-5 text-red-400" />
+                    <XCircle className="h-5 w-5 text-red-400" />
                   )}
                   <span className="font-semibold text-gray-900">
                     {candidate.interview.recommendation ? "Recommended" : "Not Recommended"}
@@ -200,18 +291,17 @@ export default async function CandidateDetailPage({
               </CardContent>
             </Card>
 
-            {/* Score breakdown */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="h-4 w-4" />
                   Score Breakdown
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 space-y-4">
+              <CardContent className="space-y-4 pt-0">
                 {scoreItems.map((item) => (
                   <div key={item.label}>
-                    <div className="flex justify-between text-sm mb-1.5">
+                    <div className="mb-1.5 flex justify-between text-sm">
                       <span className="text-gray-600">{item.label}</span>
                       <span className={cn("font-bold", getScoreColor(item.value))}>
                         {Math.round(item.value)}
@@ -223,16 +313,15 @@ export default async function CandidateDetailPage({
               </CardContent>
             </Card>
 
-            {/* Strengths */}
             {strengths.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm text-green-700">✓ Strengths</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0 space-y-2">
+                <CardContent className="space-y-2 pt-0">
                   {strengths.map((s) => (
                     <div key={s} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                      <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
                       <p className="text-sm text-gray-700">{s}</p>
                     </div>
                   ))}
@@ -240,96 +329,16 @@ export default async function CandidateDetailPage({
               </Card>
             )}
 
-            {/* Weaknesses */}
             {weaknesses.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm text-red-600">✗ Areas to Improve</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0 space-y-2">
+                <CardContent className="space-y-2 pt-0">
                   {weaknesses.map((w) => (
                     <div key={w} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+                      <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
                       <p className="text-sm text-gray-700">{w}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right: Video + Summary + Transcript */}
-          <div className="col-span-2 space-y-4">
-            {/* Video recording */}
-            {videoUrl && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Video className="w-4 h-4" />
-                    Interview Recording
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <video
-                    src={videoUrl}
-                    controls
-                    className="w-full rounded-lg bg-black"
-                    style={{ maxHeight: 360 }}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* AI Summary */}
-            {candidate.interview.summary && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">AI Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-gray-700 leading-relaxed">{candidate.interview.summary}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Transcript */}
-            {transcript && transcript.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <MessageSquare className="w-4 h-4" />
-                    Interview Transcript
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3 max-h-[500px] overflow-y-auto">
-                  {transcript.map((entry, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "flex gap-3",
-                        entry.role === "ai" ? "flex-row" : "flex-row-reverse"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-                          entry.role === "ai"
-                            ? "bg-indigo-100 text-indigo-700"
-                            : "bg-gray-100 text-gray-600"
-                        )}
-                      >
-                        {entry.role === "ai" ? "Z" : "C"}
-                      </div>
-                      <div
-                        className={cn(
-                          "max-w-[80%] px-4 py-2.5 rounded-xl text-sm",
-                          entry.role === "ai"
-                            ? "bg-indigo-50 text-indigo-900"
-                            : "bg-gray-100 text-gray-800"
-                        )}
-                      >
-                        {entry.content}
-                      </div>
                     </div>
                   ))}
                 </CardContent>
