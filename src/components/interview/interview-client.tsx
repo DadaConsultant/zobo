@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { postJsonWithRetry } from "@/lib/post-json-retry";
 import { Mic, CheckCircle, AlertCircle, Loader2, Square, Video, VideoOff, RefreshCw, Upload } from "lucide-react";
 
 type Phase = "entry" | "permission" | "interview" | "uploading" | "complete" | "error";
@@ -301,6 +302,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   /** Remaining seconds to answer after the AI finishes speaking; null when not counting. */
   const [answerSecondsRemaining, setAnswerSecondsRemaining] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  /** "saving" = submitting transcript+complete API; "video" = uploading recording blob */
+  const [postInterviewStep, setPostInterviewStep] = useState<"saving" | "video" | null>(null);
 
   // Audio-only per-answer recorder
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
@@ -827,9 +830,21 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Complete + video upload ────────────────────────────────────────────────
 
   async function completeInterview(finalTranscript: TranscriptEntry[]) {
+    setPostInterviewStep("saving");
     setPhase("uploading");
 
-    // Stop the continuous video recorder and collect remaining chunks
+    const id = interviewId;
+    if (!id) {
+      disposeFullSessionRecordingAudio(recordingAudioContextRef);
+      recordingComposedStreamRef.current = null;
+      videoStreamRef.current?.getTracks().forEach((t) => t.stop());
+      setError("Session lost — please refresh and start again if this message persists.");
+      setPostInterviewStep(null);
+      setPhase("error");
+      return;
+    }
+
+    // Stop the continuous video recorder and collect remaining chunks (before network calls)
     const videoBlob = await new Promise<Blob>((resolve) => {
       const recorder = videoRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
@@ -837,47 +852,78 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
         return;
       }
       if (recorder.state === "paused") recorder.resume();
-      recorder.addEventListener("stop", () => {
-        resolve(new Blob(videoChunksRef.current, { type: "video/webm" }));
-      }, { once: true });
+      recorder.addEventListener(
+        "stop",
+        () => {
+          resolve(new Blob(videoChunksRef.current, { type: "video/webm" }));
+        },
+        { once: true }
+      );
       recorder.stop();
     });
 
-    // Upload video directly to Vercel Blob CDN (bypasses the 4.5 MB serverless limit)
-    if (videoBlob.size > 10_000) {
-      try {
-        const blob = await upload(
-          `interviews/${interviewId}/recording.webm`,
-          videoBlob,
-          {
-            access: "public",
-            handleUploadUrl: `/api/interviews/${interviewId}/upload-video`,
+    let saveFailed = false;
+    try {
+      // 1) Persist transcript + mark completed (fast) — not blocked on video or AI scoring
+      await postJsonWithRetry<{ success: boolean; evaluationPending?: boolean }>(
+        `/api/interviews/${id}/complete`,
+        { transcript: finalTranscript },
+        { maxAttempts: 4, baseDelayMs: 1_000 }
+      );
+
+      setPostInterviewStep("video");
+
+      // 2) Video upload (best-effort; interview already saved)
+      if (videoBlob.size > 10_000) {
+        const maxVideoAttempts = 3;
+        for (let attempt = 0; attempt < maxVideoAttempts; attempt++) {
+          try {
+            const blob = await upload(`interviews/${id}/recording.webm`, videoBlob, {
+              access: "public",
+              handleUploadUrl: `/api/interviews/${id}/upload-video`,
+            });
+            const putRes = await fetch(`/api/interviews/${id}/upload-video`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ videoUrl: blob.url }),
+            });
+            if (!putRes.ok) {
+              const err = await putRes.json().catch(() => ({}));
+              throw new Error(
+                typeof (err as { error?: string }).error === "string"
+                  ? (err as { error: string }).error
+                  : "Failed to save video link"
+              );
+            }
+            break;
+          } catch (err) {
+            if (attempt === maxVideoAttempts - 1) {
+              console.error("Video upload failed after retries — interview responses are still saved:", err);
+            } else {
+              await new Promise((r) => setTimeout(r, 1_200 * (attempt + 1)));
+            }
           }
-        );
-        // Save URL explicitly — guarantees it persists in local dev
-        // (where the Vercel CDN callback cannot reach localhost)
-        await fetch(`/api/interviews/${interviewId}/upload-video`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoUrl: blob.url }),
-        });
-      } catch (err) {
-        console.error("Video upload failed — transcript will still be saved:", err);
+        }
       }
+    } catch (e) {
+      saveFailed = true;
+      setError(
+        e instanceof Error
+          ? e.message
+          : "We couldn’t save your interview. Check your connection and try again, or return to the link later."
+      );
+      setPostInterviewStep(null);
+      setPhase("error");
+    } finally {
+      // Release camera + mic + recording mix graph
+      disposeFullSessionRecordingAudio(recordingAudioContextRef);
+      recordingComposedStreamRef.current = null;
+      videoStreamRef.current?.getTracks().forEach((t) => t.stop());
     }
 
-    // Save transcript + AI evaluation
-    await fetch(`/api/interviews/${interviewId}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript: finalTranscript }),
-    });
+    if (saveFailed) return;
 
-    // Release camera + mic + recording mix graph
-    disposeFullSessionRecordingAudio(recordingAudioContextRef);
-    recordingComposedStreamRef.current = null;
-    videoStreamRef.current?.getTracks().forEach((t) => t.stop());
-
+    setPostInterviewStep(null);
     setPhase("complete");
   }
 
@@ -1209,6 +1255,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Render: Uploading ──────────────────────────────────────────────────────
 
   if (phase === "uploading") {
+    const saving = postInterviewStep === "saving" || postInterviewStep === null;
     return (
       <div className="min-h-screen flex items-center justify-center px-4"
         style={{ background: "linear-gradient(135deg,#020b18 0%,#041428 55%,#061935 100%)" }}>
@@ -1219,8 +1266,14 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             <Upload className="w-9 h-9 text-cyan-400 animate-bounce" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">Saving Your Interview</h1>
-          <p className="text-cyan-200/70 mb-2">Uploading your video recording…</p>
-          <p className="text-sm text-cyan-400/50">This may take a moment. Please keep this page open.</p>
+          <p className="text-cyan-200/70 mb-2">
+            {saving ? "Submitting your answers…" : "Uploading your video recording…"}
+          </p>
+          <p className="text-sm text-cyan-400/50">
+            {saving
+              ? "We’re saving your responses first. Please keep this page open."
+              : "This step can take a while on slower connections. Please keep this page open."}
+          </p>
           <div className="mt-8 flex justify-center gap-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className="w-2 h-2 rounded-full bg-cyan-400/60 animate-bounce"
