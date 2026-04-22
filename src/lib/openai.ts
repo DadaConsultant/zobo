@@ -4,6 +4,10 @@ export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+/** Default breadth for a first-round screen; the real count is always `questions.length` on the saved job script. */
+const TYPICAL_QUESTION_MIN = 6;
+const TYPICAL_QUESTION_MAX = 8;
+
 export interface JobContext {
   title: string;
   description: string;
@@ -34,11 +38,11 @@ Job Title: ${job.title}
 Job Description: ${job.description}
 Required Skills: ${job.requiredSkills.join(", ")}
 Years of Experience Required: ${job.yearsExperience}
-${job.customQuestions?.length ? `Custom Questions to Include:\n${job.customQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}` : ""}
+${job.customQuestions?.length ? `The hiring team also wants these specific topics asked (treat as required coverage; fold each into the script as appropriate):\n${job.customQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}` : ""}
 
 Generate a JSON object with:
 1. An "introduction" string (2-3 sentences): Zobo introduces itself by name, warmly welcomes the candidate, briefly says this is a first-round AI screening, and ends with a natural lead-in to the first question such as "Here's my first question for you:" or "Let's dive straight in:" — do NOT include the question itself in the introduction
-2. A "questions" array of 6-8 interview questions. Each question should have:
+2. A "questions" array: this is the **complete** list of main interview topics. The product saves this array and the live interview uses its length as the number of main topics to cover — do not think of a separate "plus extra custom questions" beyond this one list. If specific topics are listed above for the hiring team, they belong **inside** this array (use type "custom" for those), not in addition to it. For a typical first screen, about ${TYPICAL_QUESTION_MIN}–${TYPICAL_QUESTION_MAX} items is a good default. Each item should have:
    - "id": unique string
    - "text": the question text
    - "type": one of "technical", "behavioral", "situational", "custom"
@@ -111,6 +115,8 @@ Your voice and tone:
 - Reference something the candidate said earlier when relevant
 
 ${phaseInstructions}
+
+Stay on-script: do not ask about an additional new interview topic that is not already implied by the current phase and the scripted "current" or "next" question text. Do not stack multiple new topics in one turn.
 
 Early exit: If the candidate clearly asks to stop, end, or leave the interview (e.g. "I have to go", "please end this", "I'd like to stop now"), respond with a very brief warm closing and set endSession to true — do not ask another question.
 
