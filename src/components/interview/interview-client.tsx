@@ -299,6 +299,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [cameraTrackEnded, setCameraTrackEnded] = useState(false);
   const [preparingCountdown, setPreparingCountdown] = useState<number | null>(null);
+  /** After the 3-2-1 countdown, true until intro TTS is ready to play (audio still generating). */
+  const [preparingVoice, setPreparingVoice] = useState(false);
   /** Remaining seconds to answer after the AI finishes speaking; null when not counting. */
   const [answerSecondsRemaining, setAnswerSecondsRemaining] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(false);
@@ -324,7 +326,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const isClosingRef      = useRef(false);
   const discardAudioRef   = useRef(false);
   const lastAiMessageRef  = useRef("");
-  const introAudioUrlRef  = useRef<string | null>(null);
+  /** Resolves to an object URL for the first combined intro+first-question; started as soon as we have a script. */
+  const introTtsPromiseRef = useRef<Promise<string | null> | null>(null);
+  const introPrefetchForInterviewIdRef = useRef<string | null>(null);
 
   const answerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerDeadlineRef = useRef<number | null>(null);
@@ -1007,7 +1011,32 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
   handleQuestionTimeoutRef.current = handleQuestionTimeout;
 
-  // ── Start interview: countdown + pre-fetch audio ──────────────────────────
+  // ── Start intro TTS as early as we have a script (permission or interview) ─
+  // ElevenLabs often needs 10s+; the 3s countdown alone is not enough headroom.
+
+  useEffect(() => {
+    if (!interviewId || !script?.questions?.[0]) return;
+    if (introPrefetchForInterviewIdRef.current === interviewId && introTtsPromiseRef.current) return;
+
+    introPrefetchForInterviewIdRef.current = interviewId;
+    const fullIntro = `${script.introduction} ${script.questions[0].text}`;
+    introTtsPromiseRef.current = (async (): Promise<string | null> => {
+      try {
+        const res = await fetch(`/api/interviews/${interviewId}/tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: fullIntro }),
+        });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+      } catch {
+        return null;
+      }
+    })();
+  }, [interviewId, script]);
+
+  // ── Start interview: countdown + await shared intro TTS promise ────────────
 
   useEffect(() => {
     if (phase !== "interview" || !script || transcript.length !== 0) return;
@@ -1050,23 +1079,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     });
 
     const fullIntro = `${script.introduction} ${script.questions[0].text}`;
-    introAudioUrlRef.current = null;
 
-    // Pre-fetch the intro audio in the background during the countdown
-    // so it's ready to play the instant the countdown ends
-    fetch(`/api/interviews/${interviewId}/tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: fullIntro }),
-    })
-      .then((r) => (r.ok ? r.blob() : null))
-      .then((blob) => {
-        if (blob) introAudioUrlRef.current = URL.createObjectURL(blob);
-      })
-      .catch(() => {});
-
-    // 3-second countdown — gives the candidate time to prepare and
-    // lets the pre-fetch complete so audio plays immediately after
+    // 3-second countdown; intro audio often loads during permission + this window
     let count = 3;
     setPreparingCountdown(count);
 
@@ -1075,9 +1089,27 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       if (count <= 0) {
         clearInterval(interval);
         setPreparingCountdown(null);
+        setPreparingVoice(true);
         setTranscript([{ role: "ai", content: fullIntro, timestamp: Date.now() }]);
-        // Play pre-fetched audio if ready, otherwise speakText fetches it
-        speakText(fullIntro, introAudioUrlRef.current ?? undefined);
+        void (async () => {
+          if (cancelled) return;
+          let preloaded: string | undefined;
+          if (introTtsPromiseRef.current) {
+            try {
+              const url = await introTtsPromiseRef.current;
+              if (url) preloaded = url;
+            } catch {
+              preloaded = undefined;
+            }
+          }
+          if (cancelled) {
+            if (preloaded) URL.revokeObjectURL(preloaded);
+            setPreparingVoice(false);
+            return;
+          }
+          setPreparingVoice(false);
+          await speakText(fullIntro, preloaded);
+        })();
       } else {
         setPreparingCountdown(count);
       }
@@ -1350,8 +1382,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       <audio ref={audioRef} className="hidden" playsInline />
       <ParticleField />
 
-      {/* ── Interview start countdown overlay ────────────────────────────── */}
-      {preparingCountdown !== null && (
+      {/* ── Interview start countdown + voice buffer overlay ────────────────── */}
+      {(preparingCountdown !== null || preparingVoice) && (
         <div className="fixed inset-0 z-40 flex flex-col items-center justify-center"
           style={{ background: "rgba(2,5,12,0.96)", backdropFilter: "blur(10px)" }}>
 
@@ -1360,38 +1392,55 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             {company} · {jobTitle}
           </p>
 
-          {/* Countdown ring + number */}
-          <div className="relative flex items-center justify-center mb-10">
-            <svg className="absolute" width="160" height="160" viewBox="0 0 160 160">
-              <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="4" />
-              <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.6)"
-                strokeWidth="4" strokeLinecap="round"
-                strokeDasharray="440"
-                strokeDashoffset={440 - (440 * (3 - preparingCountdown) / 3)}
-                transform="rotate(-90 80 80)"
-                style={{ transition: "stroke-dashoffset 0.9s linear" }}
-              />
-            </svg>
-            <span className="text-8xl font-black tabular-nums"
-              style={{ color: "#fff", textShadow: "0 0 40px rgba(34,211,238,0.7)" }}>
-              {preparingCountdown}
-            </span>
-          </div>
+          {preparingVoice && preparingCountdown === null ? (
+            <>
+              <div className="relative flex items-center justify-center mb-8">
+                <div className="h-20 w-20 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin" />
+                <Loader2 className="absolute h-8 w-8 text-cyan-300" />
+              </div>
+              <h2 className="text-white text-2xl font-bold mb-2">Almost there</h2>
+              <p className="text-cyan-300/60 text-sm text-center max-w-xs">
+                Finishing the interviewer’s voice. This usually only takes a few seconds.
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Countdown ring + number */}
+              <div className="relative flex items-center justify-center mb-10">
+                <svg className="absolute" width="160" height="160" viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="4" />
+                  <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34,211,238,0.6)"
+                    strokeWidth="4" strokeLinecap="round"
+                    strokeDasharray="440"
+                    strokeDashoffset={
+                      preparingCountdown != null
+                        ? 440 - (440 * (3 - preparingCountdown) / 3)
+                        : 440
+                    }
+                    transform="rotate(-90 80 80)"
+                    style={{ transition: "stroke-dashoffset 0.9s linear" }}
+                  />
+                </svg>
+                <span className="text-8xl font-black tabular-nums"
+                  style={{ color: "#fff", textShadow: "0 0 40px rgba(34,211,238,0.7)" }}>
+                  {preparingCountdown}
+                </span>
+              </div>
 
-          {/* Message */}
-          <h2 className="text-white text-2xl font-bold mb-2">Get Ready</h2>
-          <p className="text-cyan-300/60 text-sm text-center max-w-xs">
-            Your AI interviewer is about to start.<br />Find a comfortable position and speak clearly.
-          </p>
+              <h2 className="text-white text-2xl font-bold mb-2">Get Ready</h2>
+              <p className="text-cyan-300/60 text-sm text-center max-w-xs">
+                Your AI interviewer is about to start.<br />Find a comfortable position and speak clearly.
+              </p>
 
-          {/* Animated dots to show loading in background */}
-          <div className="flex items-center gap-1.5 mt-8">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-400/40 animate-pulse"
-                style={{ animationDelay: `${i * 300}ms` }} />
-            ))}
-            <span className="text-cyan-400/40 text-xs ml-2">Preparing your interview…</span>
-          </div>
+              <div className="flex items-center gap-1.5 mt-8">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-400/40 animate-pulse"
+                    style={{ animationDelay: `${i * 300}ms` }} />
+                ))}
+                <span className="text-cyan-400/40 text-xs ml-2">We&apos;re also preparing the voice in the background</span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
