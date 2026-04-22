@@ -55,6 +55,8 @@ export default async function CandidateDetailPage({
       ]
     : [];
 
+  const evaluationPending = candidate.interview?.status === "COMPLETED" && scores == null;
+
   return (
     <div className="mx-auto w-full max-w-4xl p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -83,6 +85,10 @@ export default async function CandidateDetailPage({
             <p className="mt-1 break-words text-sm text-gray-500">
               {candidate.email} · {candidate.job.title}
             </p>
+            {evaluationPending && (
+              <p className="mt-1.5 text-sm text-amber-700/90">
+                AI scores are still generating — refresh in a moment if they don’t appear.
+              </p>
           </div>
           {scores && (
             <div className="hidden shrink-0 text-right sm:block">
@@ -203,6 +209,12 @@ export default async function CandidateDetailPage({
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+          {evaluationPending && (
+            <div className="order-first col-span-1 w-full rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-900 lg:col-span-3">
+              <span className="font-semibold">AI evaluation in progress.</span> The interview is saved;
+              scores and summary usually appear within a few minutes. Refresh the page to update.
+            </div>
+          )}
           {/* Mobile order: recording + summary + transcript first */}
           <div className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-2 lg:gap-6">
             {videoUrl && (
@@ -226,7 +238,7 @@ export default async function CandidateDetailPage({
               </Card>
             )}
 
-            {candidate.interview.summary && (
+            {candidate.interview?.summary && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">AI Summary</CardTitle>
@@ -275,41 +287,51 @@ export default async function CandidateDetailPage({
           </div>
 
           <div className="order-2 flex flex-col gap-4 lg:order-1 lg:col-span-1">
-            <Card>
-              <CardContent className="p-4 sm:p-5">
-                <div className="mb-1 flex items-center gap-2">
-                  {candidate.interview.recommendation ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-400" />
-                  )}
-                  <span className="font-semibold text-gray-900">
-                    {candidate.interview.recommendation ? "Recommended" : "Not Recommended"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400">AI hiring recommendation</p>
-              </CardContent>
-            </Card>
+            {scores && (
+              <Card>
+                <CardContent className="p-4 sm:p-5">
+                  <div className="mb-1 flex items-center gap-2">
+                    {candidate.interview?.recommendation ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-400" />
+                    )}
+                    <span className="font-semibold text-gray-900">
+                      {candidate.interview?.recommendation ? "Recommended" : "Not Recommended"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">AI hiring recommendation</p>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4" />
-                  Score Breakdown
+                  {scores ? "Score Breakdown" : "Scores"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
-                {scoreItems.map((item) => (
-                  <div key={item.label}>
-                    <div className="mb-1.5 flex justify-between text-sm">
-                      <span className="text-gray-600">{item.label}</span>
-                      <span className={cn("font-bold", getScoreColor(item.value))}>
-                        {Math.round(item.value)}
-                      </span>
+                {scoreItems.length > 0 ? (
+                  scoreItems.map((item) => (
+                    <div key={item.label}>
+                      <div className="mb-1.5 flex justify-between text-sm">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className={cn("font-bold", getScoreColor(item.value))}>
+                          {Math.round(item.value)}
+                        </span>
+                      </div>
+                      <Progress value={item.value} />
                     </div>
-                    <Progress value={item.value} />
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    {evaluationPending
+                      ? "AI scores are being generated. Check back shortly or refresh the page."
+                      : "No scores available for this interview."}
+                  </p>
+                )}
               </CardContent>
             </Card>
 

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { evaluateInterview, type TranscriptEntry } from "@/lib/openai";
+import { evaluateAndStoreInterviewResult } from "@/lib/persist-interview-evaluation";
 import { rateLimitOpenAiInterview } from "@/lib/rate-limit";
 import { z } from "zod";
+
+/** Headroom for background evaluation after the response is sent (Vercel serverless). */
+export const maxDuration = 60;
 
 const completeSchema = z.object({
   transcript: z.array(
@@ -37,29 +42,27 @@ export async function POST(
       return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
 
+    // Idempotent retries: interview already saved — return success without duplicating work.
+    if (interview.status === "COMPLETED" && interview.transcript != null) {
+      return NextResponse.json({
+        success: true,
+        evaluationPending: interview.scores == null,
+      });
+    }
+
     const body = await req.json();
     const { transcript } = completeSchema.parse(body);
-
-    const job = interview.candidate.job;
-    const jobContext = {
-      title: job.title,
-      description: job.description,
-      requiredSkills: job.requiredSkills as string[],
-      yearsExperience: job.yearsExperience,
-    };
-
-    const evaluation = await evaluateInterview(transcript as TranscriptEntry[], jobContext);
 
     await prisma.$transaction([
       prisma.interview.update({
         where: { id },
         data: {
           transcript: transcript as never,
-          scores: evaluation.scores as never,
-          summary: evaluation.summary,
-          strengths: evaluation.strengths as never,
-          weaknesses: evaluation.weaknesses as never,
-          recommendation: evaluation.recommendation,
+          scores: Prisma.DbNull,
+          summary: null,
+          strengths: [] as never,
+          weaknesses: [] as never,
+          recommendation: null,
           status: "COMPLETED",
           completedAt: new Date(),
         },
@@ -70,7 +73,11 @@ export async function POST(
       }),
     ]);
 
-    return NextResponse.json({ success: true, evaluation });
+    after(async () => {
+      await evaluateAndStoreInterviewResult(id);
+    });
+
+    return NextResponse.json({ success: true, evaluationPending: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
