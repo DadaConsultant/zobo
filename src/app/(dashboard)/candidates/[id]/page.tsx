@@ -89,6 +89,7 @@ export default async function CandidateDetailPage({
               <p className="mt-1.5 text-sm text-amber-700/90">
                 AI scores are still generating — refresh in a moment if they don’t appear.
               </p>
+            )}
           </div>
           {scores && (
             <div className="hidden shrink-0 text-right sm:block">
