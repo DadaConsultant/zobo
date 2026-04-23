@@ -47,6 +47,12 @@ const ANSWER_WINDOW_SECONDS = (() => {
   return Math.min(600, Math.max(30, n));
 })();
 
+/** Vercel Blob Hobby has a 1GB project-wide cap; upload fails with a quota error when full. */
+function isVercelBlobQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /quota|storage quota|1gb|1\s*gb|exceeded.*hobby|hobby plan/i.test(msg);
+}
+
 /** Stored in transcript / sent to the model when the per-question timer fires. */
 const TIMEOUT_TRANSCRIPT_MARKER =
   "[Time expired for this question — moving on to stay on schedule.]";
@@ -307,7 +313,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   /** "saving" = submitting transcript+complete API; "video" = uploading recording blob */
   const [postInterviewStep, setPostInterviewStep] = useState<"saving" | "video" | null>(null);
   /** Set when finishing: whether the session video reached Blob + DB; drives honest complete-screen copy. */
-  const [videoHandoff, setVideoHandoff] = useState<"uploaded" | "no_data" | "upload_failed" | null>(null);
+  const [videoHandoff, setVideoHandoff] = useState<
+    "uploaded" | "no_data" | "upload_failed" | "storage_quota" | null
+  >(null);
 
   // Audio-only per-answer recorder
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
@@ -891,6 +899,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       if (videoBlob.size > 0) {
         const maxVideoAttempts = 5;
         let videoStored = false;
+        let lastVideoErr: unknown;
         for (let attempt = 0; attempt < maxVideoAttempts; attempt++) {
           try {
             const uploadedBlob = await upload(`interviews/${id}/recording.webm`, videoBlob, {
@@ -914,6 +923,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             setVideoHandoff("uploaded");
             break;
           } catch (err) {
+            lastVideoErr = err;
             const last = attempt === maxVideoAttempts - 1;
             if (last) {
               console.error(
@@ -927,7 +937,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
           }
         }
         if (!videoStored) {
-          setVideoHandoff("upload_failed");
+          setVideoHandoff(
+            isVercelBlobQuotaError(lastVideoErr) ? "storage_quota" : "upload_failed"
+          );
         }
       }
     } catch (e) {
@@ -1341,7 +1353,10 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Render: Complete ───────────────────────────────────────────────────────
 
   if (phase === "complete") {
-    const videoProblem = videoHandoff === "no_data" || videoHandoff === "upload_failed";
+    const videoProblem =
+      videoHandoff === "no_data" ||
+      videoHandoff === "upload_failed" ||
+      videoHandoff === "storage_quota";
     return (
       <div className="min-h-screen flex items-center justify-center px-4"
         style={{ background: "linear-gradient(135deg,#020b18 0%,#041428 55%,#061935 100%)" }}>
@@ -1359,6 +1374,12 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
                 <p>
                   We could not find a full session recording. Your <strong>answers and transcript are saved</strong>;
                   the recruiter may not have a video replay for this session.
+                </p>
+              ) : videoHandoff === "storage_quota" ? (
+                <p>
+                  We <strong>saved your answers and transcript</strong>. The video could not be stored because the
+                  host&apos;s storage limit was reached (this is not your fault). The company may need to free space or
+                  upgrade storage — you can still be reviewed from your responses.
                 </p>
               ) : (
                 <p>
