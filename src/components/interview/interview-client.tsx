@@ -306,6 +306,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const [isOffline, setIsOffline] = useState(false);
   /** "saving" = submitting transcript+complete API; "video" = uploading recording blob */
   const [postInterviewStep, setPostInterviewStep] = useState<"saving" | "video" | null>(null);
+  /** Set when finishing: whether the session video reached Blob + DB; drives honest complete-screen copy. */
+  const [videoHandoff, setVideoHandoff] = useState<"uploaded" | "no_data" | "upload_failed" | null>(null);
 
   // Audio-only per-answer recorder
   const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
@@ -834,6 +836,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Complete + video upload ────────────────────────────────────────────────
 
   async function completeInterview(finalTranscript: TranscriptEntry[]) {
+    setVideoHandoff(null);
     setPostInterviewStep("saving");
     setPhase("uploading");
 
@@ -866,6 +869,13 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       recorder.stop();
     });
 
+    // Any non-empty file should be uploaded. The old 10KB gate skipped real recordings under that size,
+    // so Vercel Blob never received a file and recruiters saw no video.
+    if (videoBlob.size === 0) {
+      console.error("Interview video blob is empty (no MediaRecorder data).");
+      setVideoHandoff("no_data");
+    }
+
     let saveFailed = false;
     try {
       // 1) Persist transcript + mark completed (fast) — not blocked on video or AI scoring
@@ -877,19 +887,20 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
       setPostInterviewStep("video");
 
-      // 2) Video upload (best-effort; interview already saved)
-      if (videoBlob.size > 10_000) {
-        const maxVideoAttempts = 3;
+      // 2) Video upload to Vercel Blob + PUT videoUrl (any non-empty webm; best-effort if interview saved)
+      if (videoBlob.size > 0) {
+        const maxVideoAttempts = 5;
+        let videoStored = false;
         for (let attempt = 0; attempt < maxVideoAttempts; attempt++) {
           try {
-            const blob = await upload(`interviews/${id}/recording.webm`, videoBlob, {
+            const uploadedBlob = await upload(`interviews/${id}/recording.webm`, videoBlob, {
               access: "public",
               handleUploadUrl: `/api/interviews/${id}/upload-video`,
             });
             const putRes = await fetch(`/api/interviews/${id}/upload-video`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ videoUrl: blob.url }),
+              body: JSON.stringify({ videoUrl: uploadedBlob.url }),
             });
             if (!putRes.ok) {
               const err = await putRes.json().catch(() => ({}));
@@ -899,14 +910,24 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
                   : "Failed to save video link"
               );
             }
+            videoStored = true;
+            setVideoHandoff("uploaded");
             break;
           } catch (err) {
-            if (attempt === maxVideoAttempts - 1) {
-              console.error("Video upload failed after retries — interview responses are still saved:", err);
+            const last = attempt === maxVideoAttempts - 1;
+            if (last) {
+              console.error(
+                "Video upload/PUT failed after retries — bytes:",
+                videoBlob.size,
+                err
+              );
             } else {
-              await new Promise((r) => setTimeout(r, 1_200 * (attempt + 1)));
+              await new Promise((r) => setTimeout(r, 1_200 * 2 ** attempt));
             }
           }
+        }
+        if (!videoStored) {
+          setVideoHandoff("upload_failed");
         }
       }
     } catch (e) {
@@ -1320,6 +1341,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   // ── Render: Complete ───────────────────────────────────────────────────────
 
   if (phase === "complete") {
+    const videoProblem = videoHandoff === "no_data" || videoHandoff === "upload_failed";
     return (
       <div className="min-h-screen flex items-center justify-center px-4"
         style={{ background: "linear-gradient(135deg,#020b18 0%,#041428 55%,#061935 100%)" }}>
@@ -1330,8 +1352,28 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             <CheckCircle className="w-10 h-10 text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">Interview Complete!</h1>
-          <p className="text-cyan-200/70 mb-2">Thank you, {name}! Your interview has been submitted.</p>
-          <p className="text-sm text-cyan-400/50">The recruiter will review your results and be in touch if you&apos;re shortlisted.</p>
+          <p className="text-cyan-200/70 mb-2">Thank you, {name}! Your interview responses have been submitted.</p>
+          {videoProblem ? (
+            <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-950/40 px-4 py-3 text-left text-sm text-amber-100/90">
+              {videoHandoff === "no_data" ? (
+                <p>
+                  We could not find a full session recording. Your <strong>answers and transcript are saved</strong>;
+                  the recruiter may not have a video replay for this session.
+                </p>
+              ) : (
+                <p>
+                  We <strong>saved your answers and transcript</strong>, but the video file could not be uploaded
+                  after several attempts. The recruiter may not see a video for this session — you can let them know
+                  and try again on a more stable connection if they ask for a re-take.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-cyan-400/50">
+              The recruiter can review your recording, transcript, and results.
+            </p>
+          )}
+          <p className="text-sm text-cyan-400/50">They’ll be in touch if you’re shortlisted.</p>
           <div className="mt-10 text-xs text-cyan-900/60">Powered by Zobo Jobs</div>
         </div>
       </div>
