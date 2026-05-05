@@ -11,21 +11,14 @@ import { ZoboMarketingVideo } from "../../../remotion/compositions/ZoboMarketing
 
 export function MarketingVideoPlayer() {
   return (
-    <div className="w-full bg-[#140700]"  style={{
-      width: "100%",
-      aspectRatio: `${MARKETING_WIDTH} / ${MARKETING_HEIGHT}`,
-    }}>
-      <video 
-        src="https://zobo.s3.eu-west-2.amazonaws.com/demo_2_zobojobs.mp4"
-        autoPlay 
-        playsInline
-        loop 
-        className="w-full h-full object-cover" 
-        preload="auto"
-        controls
-        controlsList="nodownload"
-      />
-      {/* <Player
+    <div
+      className="w-full bg-[#140700]"
+      style={{
+        width: "100%",
+        aspectRatio: `${MARKETING_WIDTH} / ${MARKETING_HEIGHT}`,
+      }}
+    >
+      <Player
         component={ZoboMarketingVideo}
         durationInFrames={MARKETING_DURATION_FRAMES}
         fps={MARKETING_FPS}
@@ -39,7 +32,7 @@ export function MarketingVideoPlayer() {
           width: "100%",
           aspectRatio: `${MARKETING_WIDTH} / ${MARKETING_HEIGHT}`,
         }}
-      /> */}
+      />
     </div>
   );
 }
