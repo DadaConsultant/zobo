@@ -60,9 +60,9 @@ function SliderInput({ label, value, min, max, step, suffix, prefix, onChange }:
   return (
     <div className="mb-6 sm:mb-7">
       <div className="mb-2 flex flex-col gap-2 sm:mb-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <label className="text-sm font-semibold leading-snug text-[#374151] sm:text-[14px]">{label}</label>
-        <div className="flex w-full max-w-[11rem] items-center gap-1 self-start rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 sm:w-auto sm:max-w-none sm:shrink-0 sm:self-auto sm:bg-[#F5F7FA]">
-          {prefix && <span className="text-sm font-bold text-[#1F2937]">{prefix}</span>}
+        <label className="text-sm font-medium leading-snug text-[#140700] sm:text-[14px]">{label}</label>
+        <div className="flex w-full max-w-[11rem] items-center gap-1 self-start border border-[#cccccc] bg-white px-2.5 py-1.5 sm:w-auto sm:max-w-none sm:shrink-0 sm:self-auto sm:bg-[#f8f8f7]">
+          {prefix && <span className="text-sm font-semibold text-[#140700]">{prefix}</span>}
           <input
             type="number"
             value={value}
@@ -74,16 +74,15 @@ function SliderInput({ label, value, min, max, step, suffix, prefix, onChange }:
               const v = Number(e.target.value);
               if (!isNaN(v) && v >= min && v <= max) onChange(v);
             }}
-            className="min-w-0 flex-1 border-0 bg-transparent text-right text-sm font-bold text-[#1F2937] outline-none sm:w-16"
+            className="min-w-0 flex-1 border-0 bg-transparent text-right text-sm font-semibold text-[#140700] outline-none sm:w-16"
           />
-          {suffix && <span className="text-sm text-[#6B7280]">{suffix}</span>}
+          {suffix && <span className="text-sm text-[#5e5855]">{suffix}</span>}
         </div>
       </div>
-      {/* Tall touch target: padding expands hit area; track stays visible in the middle */}
       <div className="relative flex items-center py-2.5 sm:py-1">
-        <div className="relative h-3 w-full rounded-full bg-[#E5E7EB]">
+        <div className="relative h-3 w-full rounded-full bg-[#cccccc]">
           <div
-            className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#0D9488] to-[#4FD1C7] transition-[width] duration-75"
+            className="absolute left-0 top-0 h-full rounded-full bg-[#140700] transition-[width] duration-75"
             style={{ width: `${pct}%` }}
           />
           <input
@@ -98,7 +97,7 @@ function SliderInput({ label, value, min, max, step, suffix, prefix, onChange }:
           />
         </div>
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-[#9CA3AF]">
+      <div className="mt-1 flex justify-between text-[11px] text-[#5e5855]">
         <span>
           {prefix}
           {min}
@@ -126,24 +125,24 @@ function MetricCard({ label, value, symbol, highlight }: MetricCardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border p-4 sm:p-5",
+        "rounded-2xl border p-4 sm:p-5",
         highlight
-          ? "border-transparent bg-gradient-to-br from-[#0D9488] to-[#059669] shadow-[0_8px_32px_rgba(13,148,136,0.25)]"
-          : "border-[#E5E7EB] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+          ? "border-[#140700] bg-[#140700] text-[#f8f8f7]"
+          : "border-[#cccccc] bg-white"
       )}
     >
       <p
         className={cn(
-          "mb-1.5 text-xs font-semibold tracking-wide sm:mb-2 sm:text-[13px]",
-          highlight ? "text-white/75" : "text-[#6B7280]"
+          "mb-1.5 text-xs font-medium tracking-wide sm:mb-2 sm:text-[13px]",
+          highlight ? "text-[#f8f8f7]/75" : "text-[#5e5855]"
         )}
       >
         {label}
       </p>
       <p
         className={cn(
-          "text-xl font-extrabold leading-none tracking-tight sm:text-[26px]",
-          highlight ? "text-white" : "text-[#1A1A1A]"
+          "ld-font-display text-xl leading-none sm:text-[26px]",
+          highlight ? "text-[#f8f8f7]" : "text-[#140700]"
         )}
       >
         {symbol}
@@ -175,22 +174,19 @@ export default function SavingsCalculator() {
     <section id="costcalculator" className="bg-white px-4 py-12 sm:px-6 md:py-20 lg:py-24">
       <div className="mx-auto max-w-[1100px]">
         <div className="mb-10 text-center sm:mb-12 md:mb-14">
-          <p className="mb-3 text-[13px] font-bold uppercase tracking-widest text-[#4FD1C7] sm:mb-4">
-            ROI Calculator
-          </p>
-          <h2 className="mb-3 text-balance text-[clamp(1.35rem,4vw,2.75rem)] font-bold tracking-tight text-[#1A1A1A] sm:mb-4">
+          <p className="ld-eyebrow mb-3 sm:mb-4">ROI Calculator</p>
+          <h2 className="ld-font-display mx-auto mb-3 max-w-[900px] text-balance sm:mb-4">
             See How Much You Can Save with{" "}
             <span className="block sm:inline">AI Interview Automation</span>
           </h2>
-          <p className="mx-auto max-w-xl text-base text-[#6B7280] sm:text-[17px]">
+          <p className="ld-body-lg mx-auto max-w-xl">
             Zobo automates first-round interviews with AI — replace screening calls with a single link.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 rounded-3xl border border-[#E5E7EB] bg-[#F5F7FA] p-4 shadow-[0_4px_32px_rgba(0,0,0,0.06)] sm:p-6 lg:grid-cols-2 lg:gap-10 lg:p-10">
-          {/* Inputs */}
+        <div className="grid grid-cols-1 gap-8 rounded-2xl border border-[#cccccc] bg-[#f8f8f7] p-4 sm:p-6 lg:grid-cols-2 lg:gap-10 lg:p-10">
           <div className="min-w-0">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#9CA3AF]">Currency</p>
+            <p className="ld-eyebrow mb-3 opacity-80 sm:mb-4">Currency</p>
             <div className="mb-6 grid grid-cols-3 gap-2 sm:mb-8 sm:flex sm:flex-wrap sm:gap-2">
               {CURRENCIES.map((c, i) => (
                 <button
@@ -198,10 +194,10 @@ export default function SavingsCalculator() {
                   type="button"
                   onClick={() => setCurrencyIdx(i)}
                   className={cn(
-                    "rounded-lg border px-2 py-2.5 text-xs font-semibold transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13px]",
+                    "border px-2 py-2.5 text-xs font-medium transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13px]",
                     i === currencyIdx
-                      ? "border-[#0D9488] bg-[#0D9488] text-white"
-                      : "border-[#E5E7EB] bg-white text-[#6B7280] active:bg-gray-50"
+                      ? "border-[#140700] bg-[#140700] text-[#f8f8f7]"
+                      : "border-[#cccccc] bg-white text-[#5e5855] active:bg-[#f8f8f7]"
                   )}
                 >
                   {c.symbol} {c.code}
@@ -237,33 +233,30 @@ export default function SavingsCalculator() {
               onChange={setHourlyRate}
             />
 
-            <div className="mt-2 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] p-3.5 sm:p-4">
-              <p className="text-sm leading-relaxed text-[#065F46]">
-                <strong>85% reduction in screening time</strong>
+            <div className="mt-2 border border-[#cccccc] bg-white p-3.5 sm:p-4">
+              <p className="ld-body text-[#514c49]">
+                <strong className="text-[#140700]">85% reduction in screening time</strong>
                 <br />
-                That&apos;s <strong>{hoursSavedPerRole} hrs saved per role</strong> — time your team gets back.
+                That&apos;s <strong className="text-[#140700]">{hoursSavedPerRole} hrs saved per role</strong> — time your
+                team gets back.
               </p>
             </div>
           </div>
 
-          {/* Results */}
           <div className="flex min-w-0 flex-col gap-4 lg:gap-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <MetricCard label="Manual cost / month" value={manualMonthly} symbol={symbol} />
               <MetricCard label="Cost with Zobo / month" value={zoboMonthly} symbol={symbol} />
-              <MetricCard label="Monthly savings" value={monthlySavings} symbol={symbol} highlight />
-              <div className="rounded-xl bg-gradient-to-br from-[#1F2937] to-[#111827] p-4 shadow-[0_8px_32px_rgba(31,41,55,0.2)] sm:col-span-2 sm:p-5">
-                <p className="mb-2 text-xs font-semibold text-white/60 sm:text-[13px]">Annual savings</p>
+              <MetricCard label="Monthly savings" value={monthlySavings} symbol={symbol} />
+              <div className="rounded-2xl border border-[#cccccc]  p-4 sm:col-span-2 sm:p-5">
+                <p className="mb-2 text-xs font-medium text-[#f8f8f7]/60 sm:text-[13px]">Annual savings</p>
                 <AnimatedSavings value={annualSavings} symbol={symbol} />
               </div>
             </div>
 
             <MiniBarChart monthlySavings={monthlySavings} symbol={symbol} />
 
-            <Link
-              href="/book-demo"
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#0D9488] to-[#059669] px-5 py-3.5 text-center text-[15px] font-bold text-white shadow-[0_4px_16px_rgba(13,148,136,0.35)] no-underline transition-opacity active:opacity-90"
-            >
+            <Link href="/book-demo" className="ld-btn-primary mt-1 w-full py-3.5 text-center text-[15px] no-underline">
               Start Saving — Get a Demo
             </Link>
           </div>
@@ -276,7 +269,7 @@ export default function SavingsCalculator() {
 function AnimatedSavings({ value, symbol }: { value: number; symbol: string }) {
   const animated = useAnimatedNumber(value);
   return (
-    <p className="text-2xl font-extrabold leading-none tracking-tight text-[#4FD1C7] sm:text-[26px]">
+    <p className="ld-font-display text-2xl leading-none text-[#f8f8f7] sm:text-[28px]">
       {symbol}
       {animated.toLocaleString()}
     </p>
@@ -290,11 +283,8 @@ function MiniBarChart({ monthlySavings, symbol }: { monthlySavings: number; symb
   const maxVal = cumulative[11] || 1;
 
   return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-white p-3 sm:p-5">
-      <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF] sm:mb-3.5 sm:text-xs">
-        Cumulative savings over 12 months
-      </p>
-      {/* Scroll on narrow screens so bars stay readable; full width on sm+ */}
+    <div className="rounded-2xl border border-[#cccccc] bg-white p-3 sm:p-5">
+      <p className="ld-eyebrow mb-3 opacity-80 sm:mb-3.5">Cumulative savings over 12 months</p>
       <div className="-mx-1 overflow-x-auto overflow-y-hidden px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
         <div className="flex h-[4.5rem] min-w-[min(100%,22rem)] items-end justify-between gap-1 sm:min-w-0 sm:gap-1.5">
           {cumulative.map((val, i) => {
@@ -305,22 +295,20 @@ function MiniBarChart({ monthlySavings, symbol }: { monthlySavings: number; symb
                   title={`${monthsLong[i]}: ${symbol}${val.toLocaleString()}`}
                   className={cn(
                     "w-full rounded-t transition-[height] duration-300 ease-out",
-                    i === 11
-                      ? "bg-gradient-to-b from-[#4FD1C7] to-[#0D9488]"
-                      : "bg-gradient-to-b from-[#A7F3D0] to-[#34D399]"
+                    i === 11 ? "bg-[#140700]" : "bg-[#cccccc]"
                   )}
                   style={{ height: h }}
                 />
-                <span className="text-[9px] font-medium text-[#9CA3AF] sm:hidden">{months[i]}</span>
+                <span className="text-[9px] font-medium text-[#5e5855] sm:hidden">{months[i]}</span>
               </div>
             );
           })}
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-[#9CA3AF] sm:text-xs">
+      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-[#5e5855] sm:text-xs">
         <span className="hidden sm:inline">Jan</span>
         <span className="sm:hidden">Tap bars for month</span>
-        <span className="font-bold text-[#0D9488]">
+        <span className="font-semibold text-[#140700]">
           {symbol}
           {(monthlySavings * 12).toLocaleString()} / yr
         </span>
