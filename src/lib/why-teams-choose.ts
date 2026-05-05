@@ -2,18 +2,17 @@
 export const WHY_TEAMS_CHOOSE_STATS = [
   {
     value: "10x",
-    label: "Faster screening",
-    detail: "Replace hours of manual interviews with automated AI-led conversations.",
+    label: "Faster first-round screening",
+    detail: "Replace repeated manual calls with structured AI-led interviews for every candidate.",
   },
   {
-    value: "1400+",
-    label: "Interview conducted",
-    detail:
-      "We have an AI that have conducted 1400+ minutes of interviews, and we are still improving it.",
+    value: "24/7",
+    label: "Candidate interviews",
+    detail: "Keep searches moving after hours, across time zones, and before recruiters open their calendars.",
   },
   {
-    value: "3 minutes",
-    label: "To set up",
-    detail: "Create your interview in under three minutes — no training needed.",
+    value: "1",
+    label: "Client-ready shortlist",
+    detail: "Send clients comparable answers, scores, and recordings so the strongest candidate is easier to defend.",
   },
 ] as const;
