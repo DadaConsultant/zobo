@@ -1,0 +1,173 @@
+/**
+ * COLLINS-inspired tokens — scoped to `.landing-collins` on the marketing home page only.
+ * See DESIGN.md. Achromatic palette; no heavy shadows; tight tracking on sans body.
+ */
+
+.landing-collins {
+  --ld-canvas: #f8f8f7;
+  --ld-white: #ffffff;
+  --ld-onyx: #140700;
+  --ld-pewter: #cccccc;
+  --ld-slate: #5e5855;
+  --ld-steel: #514c49;
+  font-feature-settings: "kern", "liga";
+}
+
+.landing-collins .ld-font-display {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+  color: var(--ld-onyx);
+}
+
+@media (min-width: 768px) {
+  .landing-collins .ld-font-display {
+    letter-spacing: -0.09em;
+  }
+}
+
+.landing-collins .ld-font-heading {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ld-onyx);
+}
+
+.landing-collins .ld-eyebrow {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ld-steel);
+}
+
+.landing-collins .ld-body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.3;
+  letter-spacing: -0.021em;
+  color: var(--ld-slate);
+}
+
+.landing-collins .ld-body-lg {
+  font-size: 16px;
+  letter-spacing: -0.016em;
+  line-height: 1.3;
+  color: var(--ld-slate);
+}
+
+/* Primary pill — filled onyx (design: 96px radius) */
+.landing-collins .ld-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 96px;
+  padding: 0.75rem 1.5rem;
+  background: var(--ld-onyx);
+  color: var(--ld-canvas);
+  font-family: Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  border: none;
+  transition: opacity 150ms ease;
+}
+
+.landing-collins .ld-btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Parchment pill on Deep Onyx sections (readable inverse of primary) */
+.landing-collins .ld-btn-invert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 96px;
+  padding: 0.75rem 1.5rem;
+  background: var(--ld-canvas);
+  color: var(--ld-onyx);
+  font-family: Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  border: none;
+  transition: opacity 150ms ease;
+}
+
+.landing-collins .ld-btn-invert:hover {
+  opacity: 0.92;
+}
+
+/* Ghost — sharp corners, 1px onyx */
+.landing-collins .ld-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--ld-onyx);
+  border: 1px solid var(--ld-onyx);
+  font-family: Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.landing-collins .ld-btn-ghost:hover {
+  background: rgba(20, 7, 0, 0.04);
+}
+
+/* Hero ghost on dark band */
+.landing-collins .ld-btn-hero-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--ld-white);
+  border: 1px solid var(--ld-white);
+  font-family: Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.landing-collins .ld-btn-hero-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.landing-collins .ld-card {
+  border-radius: 16px;
+  background: var(--ld-white);
+  border: 1px solid var(--ld-pewter);
+}
+
+.landing-collins .ld-card-flat {
+  border-radius: 16px;
+  border: 1px solid var(--ld-pewter);
+}
+
+.landing-collins .ld-band-dark {
+  background: var(--ld-onyx);
+  color: var(--ld-white);
+}
+
+.landing-collins .ld-nav-link:hover {
+  color: var(--ld-onyx);
+}
+
+.landing-collins .ld-card-hover:hover {
+  transform: translateY(-1px);
+  transition: transform 150ms ease;
+}
