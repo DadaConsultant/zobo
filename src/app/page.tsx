@@ -12,6 +12,9 @@ import LandingHeader from "@/components/landing/landing-header";
 import { MarketingVideoPlayer } from "@/components/landing/marketing-video-player";
 import { WHY_TEAMS_CHOOSE_STATS } from "@/lib/why-teams-choose";
 
+export const MARKETING_WIDTH = 1280;
+export const MARKETING_HEIGHT = 720;
+
 export const metadata: Metadata = {
   title: "AI Interview Automation Tool | Screen Candidates Automatically | Zobo Jobs",
   description:
@@ -297,68 +300,29 @@ export default function HomePage() {
           <div className="mb-16 text-center">
             <p className="ld-eyebrow mb-4">Features</p>
             <h2 className="ld-font-display mx-auto max-w-4xl text-[clamp(1.75rem,3.5vw,2.75rem)]">
-              Smart Candidate Scoring & Instant AI-Generated Shortlists
-            </h2>
+              Demo Interview
+           </h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {[
-              {
-                icon: <Video size={22} color="#140700" />,
-                title: "Automate Every First-Round Interview",
-                desc: "AI conducts structured video interviews with natural conversation and real follow-up questions.",
-                bullets: ["10–15 minute sessions", "Follows up dynamically", "Handles off-script responses"],
-              },
-              {
-                icon: <BarChart3 size={22} color="#140700" />,
-                title: "Smart Candidate Scoring",
-                desc: "Every candidate evaluated on four dimensions — completely standardised. Zero inconsistent notes.",
-                bullets: ["Technical knowledge", "Communication & confidence", "Experience & role fit"],
-              },
-              {
-                icon: <Award size={22} color="#140700" />,
-                title: "Instant Shortlists",
-                desc: "Top candidates surfaced automatically so you never dig through resumes or spreadsheets again.",
-                bullets: ["Ranked by overall score", "AI recommendation flag", "One-click profile view"],
-              },
-              {
-                icon: <FileText size={22} color="#140700" />,
-                title: "Full Transparency",
-                desc: "Every interview comes with complete data you can share with hiring managers.",
-                bullets: ["Video recording", "Full transcript", "AI-generated summary"],
-              },
-              {
-                icon: <Link2 size={22} color="#140700" />,
-                title: "One Shareable Link",
-                desc: "No accounts required for candidates. No friction. Higher completion rates.",
-                bullets: ["Share via email, LinkedIn, or WhatsApp", "Unique per job", "Instant access"],
-              },
-              {
-                icon: <Shield size={22} color="#140700" />,
-                title: "Enterprise-Grade Guardrails",
-                desc: "AI stays on topic, detects off-script responses, and handles interruptions gracefully.",
-                bullets: ["Secure & compliant", "No hallucinations", "GDPR-ready"],
-              },
-            ].map((f) => (
-              <div
-                key={f.title}
-                className="ld-card-hover rounded-2xl border border-[#cccccc] bg-white p-8"
-              >
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg border border-[#cccccc] bg-[#f8f8f7]">
-                  {f.icon}
-                </div>
-                <h3 className="ld-font-heading mb-2.5 text-[17px] leading-snug">{f.title}</h3>
-                <p className="ld-body mb-4">{f.desc}</p>
-                <ul className="flex flex-col gap-2 [list-style:none] p-0">
-                  {f.bullets.map((b) => (
-                    <li key={b} className="flex items-center gap-2 text-[13px] text-[#514c49]">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#140700]" />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="overflow-hidden rounded-2xl border border-[#cccccc]">
+           <div
+                 className="w-full bg-[#140700]"
+                 style={{
+                   width: "100%",
+                   aspectRatio: `${MARKETING_WIDTH} / ${MARKETING_HEIGHT}`,
+                 }}
+               >
+                  <video 
+                      src="https://zobo.s3.eu-west-2.amazonaws.com/demo_2_zobojobs.mp4" 
+                      playsInline
+                      loop 
+                      className="w-full h-full object-cover" 
+                      preload="auto"
+                      controls
+                      controlsList="nodownload"
+                    />
+               </div>
+           
           </div>
         </div>
       </section>

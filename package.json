@@ -9,6 +9,7 @@
     "lint": "next lint",
     "remotion:studio": "remotion studio remotion/index.ts",
     "remotion:render": "remotion render remotion/index.ts ZoboMarketing public/zobo-marketing.mp4",
+    "remotion:render:x": "remotion render remotion/index.ts ZoboXExplainer public/zobo-x-explainer.mp4",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
