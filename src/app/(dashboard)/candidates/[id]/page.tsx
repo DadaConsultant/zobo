@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp, Video, WifiOff } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, MessageSquare, TrendingUp, Video, WifiOff, Headphones } from "lucide-react";
 import { cn, getScoreColor } from "@/lib/utils";
 
 interface Scores {
@@ -42,6 +42,7 @@ export default async function CandidateDetailPage({
   const scores = candidate.interview?.scores as Scores | null;
   const transcript = candidate.interview?.transcript as TranscriptEntry[] | null;
   const videoUrl = candidate.interview?.videoUrl ?? null;
+  const audioUrl = candidate.interview?.audioUrl ?? null;
   const strengths = (candidate.interview?.strengths ?? []) as string[];
   const weaknesses = (candidate.interview?.weaknesses ?? []) as string[];
 
@@ -233,6 +234,29 @@ export default async function CandidateDetailPage({
                       controls
                       playsInline
                       className="max-h-[min(50vh,260px)] w-full object-contain sm:max-h-[min(58vh,360px)] lg:max-h-[360px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!videoUrl && audioUrl && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Headphones className="h-4 w-4" />
+                    Interview Recording (Audio)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-4">
+                    <p className="text-xs text-gray-400 mb-3">
+                      This candidate completed an audio-only interview session.
+                    </p>
+                    <audio
+                      src={audioUrl}
+                      controls
+                      className="w-full"
                     />
                   </div>
                 </CardContent>

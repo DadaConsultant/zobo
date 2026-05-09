@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { postJsonWithRetry } from "@/lib/post-json-retry";
-import { Mic, CheckCircle, AlertCircle, Loader2, Square, Video, VideoOff, RefreshCw, Upload } from "lucide-react";
+import { Mic, CheckCircle, AlertCircle, Loader2, Square, Video, VideoOff, RefreshCw, Upload, Headphones } from "lucide-react";
 
-type Phase = "entry" | "permission" | "interview" | "uploading" | "complete" | "error";
+type Phase = "entry" | "mode-select" | "permission" | "interview" | "uploading" | "complete" | "error";
+type RecordingMode = "video" | "audio";
 type PermissionState = "idle" | "requesting" | "granted" | "denied";
 
 interface TranscriptEntry {
@@ -266,6 +267,55 @@ function buildFullSessionRecordingStream(
   }
 }
 
+/**
+ * Full-session audio-only recording: mic + AI TTS audio mixed into one stream.
+ * Used when the candidate chooses audio-only mode (no camera).
+ */
+function buildFullSessionAudioOnlyStream(
+  micStream: MediaStream,
+  aiAudioEl: HTMLAudioElement,
+  ctxRef: MutableRefObject<AudioContext | null>,
+  composedRef: MutableRefObject<MediaStream | null>
+): MediaStream {
+  if (composedRef.current) return composedRef.current;
+
+  const micTracks = micStream.getAudioTracks();
+  if (micTracks.length === 0) return micStream;
+
+  const AC =
+    typeof window !== "undefined"
+      ? window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      : undefined;
+  if (!AC) return micStream;
+
+  try {
+    const ctx = new AC();
+    ctxRef.current = ctx;
+    void ctx.resume();
+
+    const destination = ctx.createMediaStreamDestination();
+    const micSrc = ctx.createMediaStreamSource(new MediaStream(micTracks));
+    const micGain = ctx.createGain();
+    micGain.gain.value = 1;
+    micSrc.connect(micGain);
+    micGain.connect(destination);
+
+    const elSrc = ctx.createMediaElementSource(aiAudioEl);
+    const aiGain = ctx.createGain();
+    aiGain.gain.value = 1;
+    elSrc.connect(aiGain);
+    aiGain.connect(destination);
+    aiGain.connect(ctx.destination);
+
+    composedRef.current = destination.stream;
+    return destination.stream;
+  } catch (err) {
+    console.warn("[interview] Audio-only mix unavailable, using microphone only:", err);
+    return micStream;
+  }
+}
+
 function disposeFullSessionRecordingAudio(ctxRef: MutableRefObject<AudioContext | null>) {
   try {
     ctxRef.current?.close();
@@ -293,6 +343,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [permissionState, setPermissionState] = useState<PermissionState>("idle");
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("video");
+  /** Tracks which card is loading in mode-select UI */
+  const [selectingMode, setSelectingMode] = useState<RecordingMode | null>(null);
 
   const [interviewId, setInterviewId] = useState("");
   const [script, setScript] = useState<InterviewScript | null>(null);
@@ -349,6 +402,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   const followUpCountRef = useRef(0);
   const phaseRef = useRef<Phase>("entry");
   const isThinkingRef = useRef(false);
+  const recordingModeRef = useRef<RecordingMode>("video");
   const handleQuestionTimeoutRef = useRef<() => Promise<void>>(async () => {});
 
   const currentQuestion = script?.questions[questionIndex];
@@ -380,6 +434,9 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   useEffect(() => {
     isThinkingRef.current = isThinking;
   }, [isThinking]);
+  useEffect(() => {
+    recordingModeRef.current = recordingMode;
+  }, [recordingMode]);
 
   const clearAnswerCountdown = useCallback(() => {
     if (answerTimerRef.current) {
@@ -540,9 +597,15 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     setEntryStep(2);
   }
 
-  async function handleStartAfterVerify(e: React.FormEvent) {
+  function handleStartAfterVerify(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setError("");
+    setPhase("mode-select");
+  }
+
+  async function handleSelectMode(mode: RecordingMode) {
+    setRecordingMode(mode);
+    setSelectingMode(mode);
     setError("");
 
     const res = await fetch("/api/interviews", {
@@ -552,7 +615,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     });
 
     const data = await res.json();
-    setLoading(false);
+    setSelectingMode(null);
 
     if (!res.ok) {
       setError(typeof data.error === "string" ? data.error : "Failed to start");
@@ -592,12 +655,29 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     }
   }, []);
 
+  const requestMicPermission = useCallback(async () => {
+    setPermissionState("requesting");
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      videoStreamRef.current = stream;
+      setPermissionState("granted");
+    } catch {
+      setPermissionState("denied");
+      setError("Microphone access is required for this audio interview. Please allow access and try again.");
+    }
+  }, []);
+
   // Auto-request when entering permission phase
   useEffect(() => {
     if (phase === "permission" && permissionState === "idle") {
-      requestCameraPermission();
+      if (recordingMode === "video") {
+        requestCameraPermission();
+      } else {
+        requestMicPermission();
+      }
     }
-  }, [phase, permissionState, requestCameraPermission]);
+  }, [phase, permissionState, recordingMode, requestCameraPermission, requestMicPermission]);
 
   // Callback ref: binds the live stream to whichever <video> element mounts
   const bindVideoStream = useCallback((el: HTMLVideoElement | null) => {
@@ -859,34 +939,35 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
       return;
     }
 
-    // Stop the continuous video recorder and collect remaining chunks (before network calls)
-    const videoBlob = await new Promise<Blob>((resolve) => {
+    const isAudioMode = recordingMode === "audio";
+    const blobMimeType = isAudioMode ? "audio/webm" : "video/webm";
+
+    // Stop the continuous recorder and collect remaining chunks (before network calls)
+    const recordingBlob = await new Promise<Blob>((resolve) => {
       const recorder = videoRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
-        resolve(new Blob(videoChunksRef.current, { type: "video/webm" }));
+        resolve(new Blob(videoChunksRef.current, { type: blobMimeType }));
         return;
       }
       if (recorder.state === "paused") recorder.resume();
       recorder.addEventListener(
         "stop",
         () => {
-          resolve(new Blob(videoChunksRef.current, { type: "video/webm" }));
+          resolve(new Blob(videoChunksRef.current, { type: blobMimeType }));
         },
         { once: true }
       );
       recorder.stop();
     });
 
-    // Any non-empty file should be uploaded. The old 10KB gate skipped real recordings under that size,
-    // so Vercel Blob never received a file and recruiters saw no video.
-    if (videoBlob.size === 0) {
-      console.error("Interview video blob is empty (no MediaRecorder data).");
+    if (recordingBlob.size === 0) {
+      console.error("Interview recording blob is empty (no MediaRecorder data).");
       setVideoHandoff("no_data");
     }
 
     let saveFailed = false;
     try {
-      // 1) Persist transcript + mark completed (fast) — not blocked on video or AI scoring
+      // 1) Persist transcript + mark completed (fast) — not blocked on recording or AI scoring
       await postJsonWithRetry<{ success: boolean; evaluationPending?: boolean }>(
         `/api/interviews/${id}/complete`,
         { transcript: finalTranscript },
@@ -895,40 +976,48 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
       setPostInterviewStep("video");
 
-      // 2) Video upload to Vercel Blob + PUT videoUrl (any non-empty webm; best-effort if interview saved)
-      if (videoBlob.size > 0) {
-        const maxVideoAttempts = 5;
-        let videoStored = false;
-        let lastVideoErr: unknown;
-        for (let attempt = 0; attempt < maxVideoAttempts; attempt++) {
+      // 2) Upload recording to Vercel Blob + persist URL — branches on recording mode
+      if (recordingBlob.size > 0) {
+        const uploadPath = isAudioMode
+          ? `interviews/${id}/recording-audio.webm`
+          : `interviews/${id}/recording.webm`;
+        const uploadUrl = isAudioMode
+          ? `/api/interviews/${id}/upload-audio`
+          : `/api/interviews/${id}/upload-video`;
+        const putField = isAudioMode ? "audioUrl" : "videoUrl";
+
+        const maxAttempts = 5;
+        let stored = false;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
-            const uploadedBlob = await upload(`interviews/${id}/recording.webm`, videoBlob, {
+            const uploadedBlob = await upload(uploadPath, recordingBlob, {
               access: "public",
-              handleUploadUrl: `/api/interviews/${id}/upload-video`,
+              handleUploadUrl: uploadUrl,
             });
-            const putRes = await fetch(`/api/interviews/${id}/upload-video`, {
+            const putRes = await fetch(uploadUrl, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ videoUrl: uploadedBlob.url }),
+              body: JSON.stringify({ [putField]: uploadedBlob.url }),
             });
             if (!putRes.ok) {
               const err = await putRes.json().catch(() => ({}));
               throw new Error(
                 typeof (err as { error?: string }).error === "string"
                   ? (err as { error: string }).error
-                  : "Failed to save video link"
+                  : "Failed to save recording link"
               );
             }
-            videoStored = true;
+            stored = true;
             setVideoHandoff("uploaded");
             break;
           } catch (err) {
-            lastVideoErr = err;
-            const last = attempt === maxVideoAttempts - 1;
+            lastErr = err;
+            const last = attempt === maxAttempts - 1;
             if (last) {
               console.error(
-                "Video upload/PUT failed after retries — bytes:",
-                videoBlob.size,
+                `${isAudioMode ? "Audio" : "Video"} upload/PUT failed after retries — bytes:`,
+                recordingBlob.size,
                 err
               );
             } else {
@@ -936,10 +1025,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             }
           }
         }
-        if (!videoStored) {
-          setVideoHandoff(
-            isVercelBlobQuotaError(lastVideoErr) ? "storage_quota" : "upload_failed"
-          );
+        if (!stored) {
+          setVideoHandoff(isVercelBlobQuotaError(lastErr) ? "storage_quota" : "upload_failed");
         }
       }
     } catch (e) {
@@ -1074,26 +1161,31 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
   useEffect(() => {
     if (phase !== "interview" || !script || transcript.length !== 0) return;
 
-    // Start continuous video recorder (video + mixed mic + AI TTS for employers)
+    // Start continuous recorder — video+audio mix for video mode, audio-only mix for audio mode
     const startRecorder = () => {
       if (!videoStreamRef.current) return;
       const cam = videoStreamRef.current;
       const el = audioRef.current;
-      const streamForRecorder =
-        el != null
-          ? buildFullSessionRecordingStream(
-              cam,
-              el,
-              recordingAudioContextRef,
-              recordingComposedStreamRef
-            )
-          : cam;
+      const isAudio = recordingModeRef.current === "audio";
 
-      const mimeType = getVideoMimeType();
-      const recorder = new MediaRecorder(
-        streamForRecorder,
-        mimeType ? { mimeType } : undefined
-      );
+      let streamForRecorder: MediaStream;
+      let mimeType: string;
+
+      if (isAudio) {
+        streamForRecorder =
+          el != null
+            ? buildFullSessionAudioOnlyStream(cam, el, recordingAudioContextRef, recordingComposedStreamRef)
+            : cam;
+        mimeType = getAudioMimeType();
+      } else {
+        streamForRecorder =
+          el != null
+            ? buildFullSessionRecordingStream(cam, el, recordingAudioContextRef, recordingComposedStreamRef)
+            : cam;
+        mimeType = getVideoMimeType();
+      }
+
+      const recorder = new MediaRecorder(streamForRecorder, mimeType ? { mimeType } : undefined);
       videoRecorderRef.current = recorder;
       videoChunksRef.current   = [];
       recorder.ondataavailable = (e) => {
@@ -1247,6 +1339,98 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
     );
   }
 
+  // ── Render: Mode selection ─────────────────────────────────────────────────
+
+  if (phase === "mode-select") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-xl">
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-bold text-xl">Z</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Choose Your Interview Format</h1>
+            <p className="text-gray-500 mt-1 text-sm">
+              Select how you&apos;d like your interview to be recorded.
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Video option */}
+            <button
+              type="button"
+              disabled={selectingMode !== null}
+              onClick={() => handleSelectMode("video")}
+              className="group relative text-left bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-2xl p-6 shadow-sm transition-all duration-200 hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
+                {selectingMode === "video" ? (
+                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                ) : (
+                  <Video className="w-6 h-6 text-indigo-500" />
+                )}
+              </div>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Video Interview</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Camera and microphone are recorded together. Best for a complete interview experience.
+              </p>
+              <ul className="text-xs text-gray-400 space-y-1.5">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-indigo-400 font-bold">✓</span> Camera + microphone required
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-indigo-400 font-bold">✓</span> Full video recording
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-indigo-400 font-bold">✓</span> Standard experience
+                </li>
+              </ul>
+            </button>
+
+            {/* Audio option */}
+            <button
+              type="button"
+              disabled={selectingMode !== null}
+              onClick={() => handleSelectMode("audio")}
+              className="group relative text-left bg-white border-2 border-gray-200 hover:border-emerald-400 rounded-2xl p-6 shadow-sm transition-all duration-200 hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors">
+                {selectingMode === "audio" ? (
+                  <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
+                ) : (
+                  <Headphones className="w-6 h-6 text-emerald-500" />
+                )}
+              </div>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Audio Interview</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Microphone only — no camera needed. Ideal for slower connections or limited data.
+              </p>
+              <ul className="text-xs text-gray-400 space-y-1.5">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-bold">✓</span> Microphone only
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-bold">✓</span> Lighter upload, more reliable
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-bold">✓</span> No camera required
+                </li>
+              </ul>
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-gray-400 mt-6">
+            Both formats record your answers and are reviewed by the hiring team.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Render: Permission ─────────────────────────────────────────────────────
 
   if (phase === "permission") {
@@ -1266,18 +1450,27 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
           {permissionState === "denied" && (
             <>
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <VideoOff className="w-10 h-10 text-red-400" />
+                {recordingMode === "video" ? (
+                  <VideoOff className="w-10 h-10 text-red-400" />
+                ) : (
+                  <Mic className="w-10 h-10 text-red-400" />
+                )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">Camera Access Denied</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                {recordingMode === "video" ? "Camera Access Denied" : "Microphone Access Denied"}
+              </h1>
               <p className="text-red-500 text-sm mb-6">{error}</p>
-              <Button onClick={requestCameraPermission} size="lg">
+              <Button
+                onClick={recordingMode === "video" ? requestCameraPermission : requestMicPermission}
+                size="lg"
+              >
                 <RefreshCw className="w-4 h-4" />
                 Try Again
               </Button>
             </>
           )}
 
-          {permissionState === "granted" && (
+          {permissionState === "granted" && recordingMode === "video" && (
             <>
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Video className="w-10 h-10 text-green-500" />
@@ -1312,6 +1505,41 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
               </div>
             </>
           )}
+
+          {permissionState === "granted" && recordingMode === "audio" && (
+            <>
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mic className="w-10 h-10 text-emerald-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Microphone Ready</h1>
+              <p className="text-gray-500 text-sm mb-5">
+                Your microphone is active. Find a quiet space for the best audio quality.
+              </p>
+
+              {/* Mic indicator */}
+              <div className="flex justify-center mb-6">
+                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-5 py-3">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-emerald-700 text-sm font-medium">Microphone active</span>
+                </div>
+              </div>
+
+              <Button size="xl" onClick={() => setPhase("interview")} className="w-full max-w-xs mx-auto bg-emerald-600 hover:bg-emerald-700">
+                <Headphones className="w-5 h-5" />
+                Start Audio Interview
+              </Button>
+
+              <div className="mt-6 bg-gray-50 rounded-xl p-4 text-left space-y-1.5">
+                <p className="text-sm font-medium text-gray-700">Before you begin:</p>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>✓ Find a quiet space away from background noise</li>
+                  <li>✓ Ensure your microphone is working correctly</li>
+                  <li>✓ Speak clearly and at a normal pace</li>
+                  <li>✓ The full session will be recorded (audio)</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -1332,7 +1560,11 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">Saving Your Interview</h1>
           <p className="text-cyan-200/70 mb-2">
-            {saving ? "Submitting your answers…" : "Uploading your video recording…"}
+            {saving
+              ? "Submitting your answers…"
+              : recordingMode === "audio"
+              ? "Uploading your audio recording…"
+              : "Uploading your video recording…"}
           </p>
           <p className="text-sm text-cyan-400/50">
             {saving
@@ -1507,8 +1739,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
         </div>
       )}
 
-      {/* ── Camera-off blocking overlay ──────────────────────────────────── */}
-      {isCameraOff && (
+      {/* ── Camera-off blocking overlay (video mode only) ────────────────── */}
+      {recordingMode === "video" && isCameraOff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: "rgba(2,5,12,0.92)", backdropFilter: "blur(6px)" }}>
           <div className="w-full max-w-sm text-center px-6">
@@ -1636,7 +1868,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             ))}
           </div>
 
-          {/* Candidate side — live camera feed */}
+          {/* Candidate side — camera feed (video mode) or mic indicator (audio mode) */}
           <div className="flex flex-col items-center gap-3">
             <p className="text-xs font-semibold tracking-widest uppercase text-emerald-400/70">You</p>
             <div className="relative flex items-center justify-center">
@@ -1646,12 +1878,22 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
                   <div className="absolute inset-[-28px] rounded-full border border-emerald-400/20 animate-ping" style={{ animationDuration: "2s", animationDelay: "0.3s" }} />
                 </>
               )}
-              <div className="w-36 h-36 rounded-full overflow-hidden transition-all duration-500"
-                style={{ border: isRecording ? "2px solid rgba(16,185,129,0.6)" : "1.5px solid rgba(34,211,238,0.2)",
-                  boxShadow: isRecording ? "0 0 40px rgba(16,185,129,0.35), 0 0 80px rgba(16,185,129,0.1)" : "0 0 10px rgba(34,211,238,0.05)" }}>
-                <video ref={bindVideoStream} autoPlay muted playsInline
-                  className="w-full h-full object-cover scale-x-[-1]" />
-              </div>
+              {recordingMode === "video" ? (
+                <div className="w-36 h-36 rounded-full overflow-hidden transition-all duration-500"
+                  style={{ border: isRecording ? "2px solid rgba(16,185,129,0.6)" : "1.5px solid rgba(34,211,238,0.2)",
+                    boxShadow: isRecording ? "0 0 40px rgba(16,185,129,0.35), 0 0 80px rgba(16,185,129,0.1)" : "0 0 10px rgba(34,211,238,0.05)" }}>
+                  <video ref={bindVideoStream} autoPlay muted playsInline
+                    className="w-full h-full object-cover scale-x-[-1]" />
+                </div>
+              ) : (
+                <div className="w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500"
+                  style={{ border: isRecording ? "2px solid rgba(16,185,129,0.6)" : "1.5px solid rgba(34,211,238,0.2)",
+                    background: isRecording ? "rgba(16,185,129,0.1)" : "rgba(34,211,238,0.04)",
+                    boxShadow: isRecording ? "0 0 40px rgba(16,185,129,0.35), 0 0 80px rgba(16,185,129,0.1)" : "0 0 10px rgba(34,211,238,0.05)" }}>
+                  <Mic className="w-14 h-14 transition-all duration-300"
+                    style={{ color: isRecording ? "#34d399" : "rgba(34,211,238,0.4)" }} />
+                </div>
+              )}
               {isRecording && (
                 <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-900/80 rounded-full px-2 py-0.5">
                   <Mic className="w-3 h-3 text-emerald-400" />

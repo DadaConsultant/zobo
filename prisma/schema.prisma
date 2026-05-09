@@ -125,6 +125,7 @@ model Interview {
   transcript     Json?
   audioUrl       String?
   videoUrl       String?
+  recordingType  RecordingType   @default(VIDEO)
   scores         Json?
   summary        String?         @db.Text
   strengths      Json
@@ -176,4 +177,9 @@ enum InterviewStatus {
   COMPLETED
   TERMINATED
   ABANDONED
+}
+
+enum RecordingType {
+  VIDEO
+  AUDIO
 }
