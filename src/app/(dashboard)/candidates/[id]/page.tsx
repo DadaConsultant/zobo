@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createPresignedDownloadUrl, isS3Url, s3KeyFromUrl } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -41,8 +42,28 @@ export default async function CandidateDetailPage({
 
   const scores = candidate.interview?.scores as Scores | null;
   const transcript = candidate.interview?.transcript as TranscriptEntry[] | null;
-  const videoUrl = candidate.interview?.videoUrl ?? null;
-  const audioUrl = candidate.interview?.audioUrl ?? null;
+
+  // For S3 objects, swap the stored URL for a short-lived presigned GET URL so
+  // private buckets work. Falls back to the stored URL for non-S3 sources.
+  const rawVideoUrl = candidate.interview?.videoUrl ?? null;
+  const rawAudioUrl = candidate.interview?.audioUrl ?? null;
+
+  async function toViewUrl(stored: string | null): Promise<string | null> {
+    if (!stored) return null;
+    if (!isS3Url(stored)) return stored;
+    const key = s3KeyFromUrl(stored);
+    if (!key) return stored;
+    try {
+      return await createPresignedDownloadUrl(key);
+    } catch {
+      return stored;
+    }
+  }
+
+  const [videoUrl, audioUrl] = await Promise.all([
+    toViewUrl(rawVideoUrl),
+    toViewUrl(rawAudioUrl),
+  ]);
   const strengths = (candidate.interview?.strengths ?? []) as string[];
   const weaknesses = (candidate.interview?.weaknesses ?? []) as string[];
 

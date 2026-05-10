@@ -1,11 +1,11 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createPresignedUploadUrl } from "@/lib/s3";
 
 /**
- * POST — called by @vercel/blob/client `upload()` to obtain a signed upload token.
- *        Vercel's CDN also calls this endpoint with `type: 'blob.upload-completed'`
- *        once the direct upload finishes (production only).
+ * POST — client requests a presigned S3 PUT URL.
+ *        Responds with { presignedUrl, fileUrl } so the browser can upload
+ *        the video blob directly to S3 without passing through this server.
  */
 export async function POST(
   req: NextRequest,
@@ -14,40 +14,18 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const body = (await req.json()) as HandleUploadBody;
-
-    const jsonResponse = await handleUpload({
-      body,
-      request: req,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["video/webm", "video/mp4", "video/*"],
-        maximumSizeInBytes: 500 * 1024 * 1024, // 500 MB
-        tokenPayload: id,
-      }),
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Fires in production when Vercel CDN confirms the upload
-        try {
-          await prisma.interview.update({
-            where: { id: tokenPayload as string },
-            data: { videoUrl: blob.url },
-          });
-        } catch (err) {
-          console.error("onUploadCompleted DB update failed:", err);
-        }
-      },
-    });
-
-    return NextResponse.json(jsonResponse);
+    const { contentType = "video/webm" } = await req.json().catch(() => ({}));
+    const key = `interviews/${id}/recording.webm`;
+    const { presignedUrl, fileUrl } = await createPresignedUploadUrl(key, contentType);
+    return NextResponse.json({ presignedUrl, fileUrl });
   } catch (error) {
-    console.error("handleUpload error:", error);
-    return NextResponse.json({ error: "Upload token failed" }, { status: 400 });
+    console.error("S3 presign (video) error:", error);
+    return NextResponse.json({ error: "Failed to generate upload URL" }, { status: 500 });
   }
 }
 
 /**
- * PUT — called by the client after `upload()` resolves to guarantee the URL
- *       is saved. Covers local dev (where the CDN callback can't reach localhost)
- *       and acts as a safety net in production.
+ * PUT — called by the client after the S3 upload completes to persist the URL.
  */
 export async function PUT(
   req: NextRequest,
@@ -64,7 +42,7 @@ export async function PUT(
 
     await prisma.interview.update({
       where: { id },
-      data: { videoUrl },
+      data: { videoUrl, recordingType: "VIDEO" },
     });
 
     return NextResponse.json({ success: true });
