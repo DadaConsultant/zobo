@@ -42,7 +42,7 @@ export async function PUT(
 
     await prisma.interview.update({
       where: { id },
-      data: { videoUrl, recordingType: "VIDEO" },
+      data: { videoUrl },
     });
 
     return NextResponse.json({ success: true });
