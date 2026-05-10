@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { MutableRefObject } from "react";
-import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,10 +47,10 @@ const ANSWER_WINDOW_SECONDS = (() => {
   return Math.min(600, Math.max(30, n));
 })();
 
-/** Vercel Blob Hobby has a 1GB project-wide cap; upload fails with a quota error when full. */
-function isVercelBlobQuotaError(err: unknown): boolean {
+/** Detect S3 access / configuration errors vs transient network errors. */
+function isS3ConfigError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /quota|storage quota|1gb|1\s*gb|exceeded.*hobby|hobby plan/i.test(msg);
+  return /access denied|invalid.*credential|no such bucket|forbidden/i.test(msg);
 }
 
 /** Stored in transcript / sent to the model when the per-question timer fires. */
@@ -976,11 +975,8 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
 
       setPostInterviewStep("video");
 
-      // 2) Upload recording to Vercel Blob + persist URL — branches on recording mode
+      // 2) Upload recording to S3 via presigned URL — branches on recording mode
       if (recordingBlob.size > 0) {
-        const uploadPath = isAudioMode
-          ? `interviews/${id}/recording-audio.webm`
-          : `interviews/${id}/recording.webm`;
         const uploadUrl = isAudioMode
           ? `/api/interviews/${id}/upload-audio`
           : `/api/interviews/${id}/upload-video`;
@@ -991,14 +987,40 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
         let lastErr: unknown;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
-            const uploadedBlob = await upload(uploadPath, recordingBlob, {
-              access: "public",
-              handleUploadUrl: uploadUrl,
+            // Step 1 — get a short-lived presigned S3 PUT URL from our server
+            const presignRes = await fetch(uploadUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contentType: blobMimeType }),
             });
+            if (!presignRes.ok) {
+              const err = await presignRes.json().catch(() => ({}));
+              throw new Error(
+                typeof (err as { error?: string }).error === "string"
+                  ? (err as { error: string }).error
+                  : "Failed to get upload URL"
+              );
+            }
+            const { presignedUrl, fileUrl } = await presignRes.json() as {
+              presignedUrl: string;
+              fileUrl: string;
+            };
+
+            // Step 2 — upload blob directly to S3 from the browser
+            const s3Res = await fetch(presignedUrl, {
+              method: "PUT",
+              body: recordingBlob,
+              headers: { "Content-Type": blobMimeType },
+            });
+            if (!s3Res.ok) {
+              throw new Error(`S3 upload failed: ${s3Res.status} ${s3Res.statusText}`);
+            }
+
+            // Step 3 — persist the S3 URL to the database
             const putRes = await fetch(uploadUrl, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ [putField]: uploadedBlob.url }),
+              body: JSON.stringify({ [putField]: fileUrl }),
             });
             if (!putRes.ok) {
               const err = await putRes.json().catch(() => ({}));
@@ -1016,7 +1038,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
             const last = attempt === maxAttempts - 1;
             if (last) {
               console.error(
-                `${isAudioMode ? "Audio" : "Video"} upload/PUT failed after retries — bytes:`,
+                `${isAudioMode ? "Audio" : "Video"} upload failed after retries — bytes:`,
                 recordingBlob.size,
                 err
               );
@@ -1026,7 +1048,7 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
           }
         }
         if (!stored) {
-          setVideoHandoff(isVercelBlobQuotaError(lastErr) ? "storage_quota" : "upload_failed");
+          setVideoHandoff(isS3ConfigError(lastErr) ? "storage_quota" : "upload_failed");
         }
       }
     } catch (e) {
@@ -1609,15 +1631,15 @@ export default function InterviewClient({ token, jobTitle, company }: InterviewC
                 </p>
               ) : videoHandoff === "storage_quota" ? (
                 <p>
-                  We <strong>saved your answers and transcript</strong>. The video could not be stored because the
-                  host&apos;s storage limit was reached (this is not your fault). The company may need to free space or
-                  upgrade storage — you can still be reviewed from your responses.
+                  We <strong>saved your answers and transcript</strong>. The recording could not be stored due to
+                  a storage configuration issue (this is not your fault). The company has been notified —
+                  you can still be reviewed from your responses.
                 </p>
               ) : (
                 <p>
-                  We <strong>saved your answers and transcript</strong>, but the video file could not be uploaded
-                  after several attempts. The recruiter may not see a video for this session — you can let them know
-                  and try again on a more stable connection if they ask for a re-take.
+                  We <strong>saved your answers and transcript</strong>, but the recording could not be uploaded
+                  after several attempts. The recruiter may not see a recording for this session — you can let
+                  them know and try again on a more stable connection if they ask for a re-take.
                 </p>
               )}
             </div>
