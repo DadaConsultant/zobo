@@ -7,6 +7,10 @@ const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
+  // Disable automatic checksums — browsers can't compute/send them during
+  // a direct presigned-URL PUT, which causes S3 to reject the upload.
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 const BUCKET = process.env.AWS_S3_BUCKET!;
